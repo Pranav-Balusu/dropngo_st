@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { User, Mail, Lock, Phone, MapPin, Eye, EyeOff } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase'; // Import Supabase client
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -46,11 +47,26 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      // Simulate registration - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.push('/(auth)/login') }
-      ]);
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            phone: formData.phone,
+            city: formData.city,
+            role: 'user',
+          },
+        },
+      });
+
+      if (error) {
+        Alert.alert('Registration Failed', error.message);
+      } else {
+        Alert.alert('Success', 'Account created successfully! Please check your email for a verification link.', [
+          { text: 'OK', onPress: () => router.push('/(auth)/login') }
+        ]);
+      }
     } catch (error) {
       Alert.alert('Error', 'Registration failed. Please try again.');
     } finally {
@@ -243,6 +259,13 @@ const styles = StyleSheet.create({
     elevation: 8,
     marginBottom: 32,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+    marginTop: 8,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,6 +292,36 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     padding: 4,
+  },
+  documentSection: {
+    marginBottom: 24,
+  },
+  documentUpload: {
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  uploadContainer: {
+    alignItems: 'center',
+  },
+  uploadedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  uploadText: {
+    marginTop: 8,
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  uploadedText: {
+    marginLeft: 8,
+    color: '#059669',
+    fontSize: 14,
+    fontWeight: '600',
   },
   registerButton: {
     backgroundColor: '#F97316',
@@ -309,13 +362,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  footer: {
-    paddingHorizontal: 16,
+  backButton: {
+    alignItems: 'center',
+    marginTop: 16,
   },
-  footerText: {
-    color: '#E5E7EB',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
+  backButtonText: {
+    color: '#6B7280',
+    fontSize: 14,
   },
 });

@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Luggage, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -28,19 +29,26 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // Simulate login - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, route based on email
-      if (email.includes('admin')) {
-        router.replace('/(admin)/');
-      } else if (email.includes('porter')) {
-        router.replace('/(porter)/');
-      } else {
-        router.replace('/(user)/');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        Alert.alert('Login Failed', error.message);
+      } else if (data.user) {
+        if (email.includes('admin')) {
+          // Corrected path to match the router's type definition
+          router.replace('/(admin)'); 
+        } else if (email.includes('porter')) {
+          router.replace('/(porter)');
+        } else {
+          router.replace('/(user)');
+        }
       }
     } catch (error) {
-      Alert.alert('Error', 'Login failed. Please try again.');
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error(error);
     } finally {
       setLoading(false);
     }

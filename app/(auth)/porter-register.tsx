@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { User, Mail, Lock, Phone, MapPin, Eye, EyeOff, Upload, Car, FileText, Camera, CircleCheck as CheckCircle } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '@/lib/supabase'; // Import Supabase client
 
 export default function PorterRegisterScreen() {
   const [formData, setFormData] = useState({
@@ -80,13 +81,33 @@ export default function PorterRegisterScreen() {
 
     setLoading(true);
     try {
-      // Simulate registration - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      Alert.alert(
-        'Registration Submitted', 
-        'Your porter registration has been submitted for verification. You will be notified once approved.',
-        [{ text: 'OK', onPress: () => router.push('/(auth)/login') }]
-      );
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            phone: formData.phone,
+            address: formData.address,
+            license_number: formData.licenseNumber,
+            vehicle_number: formData.vehicleNumber,
+            vehicle_type: formData.vehicleType,
+            documents: documents,
+            role: 'porter', // Assign porter role
+            verification_status: 'pending' // Set verification status
+          },
+        },
+      });
+
+      if (error) {
+        Alert.alert('Registration Failed', error.message);
+      } else {
+        Alert.alert(
+          'Registration Submitted', 
+          'Your porter registration has been submitted for verification. You will be notified once approved.',
+          [{ text: 'OK', onPress: () => router.push('/(auth)/login') }]
+        );
+      }
     } catch (error) {
       Alert.alert('Error', 'Registration failed. Please try again.');
     } finally {
