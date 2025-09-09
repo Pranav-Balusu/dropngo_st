@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { User, Mail, Phone, MapPin, Car, FileText, CreditCard as Edit, Bell, Shield, Star, Package, Clock, LogOut, Save } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase'; // Import the Supabase client
 
 export default function PorterProfileScreen() {
   const [editing, setEditing] = useState(false);
@@ -44,13 +45,28 @@ export default function PorterProfileScreen() {
     Alert.alert('Success', 'Profile updated successfully!');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => { // Make the function async
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', onPress: () => router.push('/(auth)/login') }
+        { 
+          text: 'Logout', 
+          onPress: async () => { // Use async here to await the sign-out call
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert('Error', error.message);
+              } else {
+                router.push('/(auth)/login');
+              }
+            } catch (logoutError) {
+              console.error('Logout error:', logoutError);
+              Alert.alert('Error', 'An unexpected error occurred during logout.');
+            }
+          }
+        }
       ]
     );
   };
