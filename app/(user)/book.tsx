@@ -235,16 +235,20 @@ export default function BookingScreen() {
           <View style={styles.luggageGrid}>
             {luggageSizes.map((size) => (
               <View key={size.key} style={styles.luggageItem}>
-                <Square size={24} color="#6B7280" />
-                <Text style={styles.luggageLabel}>{size.label}</Text>
-                <Text style={styles.luggageDescription}>{size.description}</Text>
+                <View style={styles.luggageItemHeader}>
+                  <Square size={24} color="#6B7280" />
+                  <View>
+                    <Text style={styles.luggageLabel}>{size.label}</Text>
+                    <Text style={styles.luggageDescription}>{size.description}</Text>
+                  </View>
+                </View>
                 <View style={styles.luggageCounter}>
                   <TouchableOpacity onPress={() => setLuggage(prev => ({ ...prev, [size.key]: Math.max(0, prev[size.key as keyof LuggageState] - 1) }))}>
-                    <Minus size={20} color="#6B7280" />
+                    <Minus size={24} color="#6B7280" />
                   </TouchableOpacity>
                   <Text style={styles.luggageCount}>{luggage[size.key as keyof LuggageState]}</Text>
                   <TouchableOpacity onPress={() => setLuggage(prev => ({ ...prev, [size.key]: prev[size.key as keyof LuggageState] + 1 }))}>
-                    <Plus size={20} color="#3B82F6" />
+                    <Plus size={24} color="#3B82F6" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -256,8 +260,17 @@ export default function BookingScreen() {
           <Text style={styles.sectionTitle}>Booking Summary</Text>
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Luggage:</Text>
+              <Text style={styles.summaryValue}>
+                {Object.keys(luggage)
+                  .filter(key => luggage[key as keyof LuggageState] > 0)
+                  .map(key => `${luggage[key as keyof LuggageState]} ${key} `)
+                  .join(', ')}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Storage Fees ({duration} hrs):</Text>
-              <Text style={styles.summaryValue}>₹{calculateTotal().toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>₹{(calculateTotal() - ((pricing?.basePickupFee || 0) + (15 * (pricing?.perKmFee || 0))) - (insurance ? 50 : 0)).toFixed(2)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Pickup & Delivery Fees:</Text>
@@ -381,16 +394,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  luggageItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
   luggageLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginTop: 8,
   },
   luggageDescription: {
     fontSize: 12,
     color: '#6B7280',
-    marginBottom: 12,
+    marginTop: 2,
   },
   luggageCounter: {
     flexDirection: 'row',
@@ -398,9 +416,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   luggageCount: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+    minWidth: 24,
+    textAlign: 'center',
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',
