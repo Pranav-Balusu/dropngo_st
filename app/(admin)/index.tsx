@@ -7,9 +7,12 @@ import {
   SafeAreaView,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TrendingUp, Users, Package, IndianRupee, Clock, MapPin, Star, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +49,7 @@ export default function AdminDashboardScreen() {
   const currentStats = dashboardStats[timeFilter as keyof typeof dashboardStats];
 
   const quickActions = [
-    { title: 'Verify Porters', count: currentStats.pendingVerifications, color: '#F97316', action: () => {} },
+    { title: 'Verify Porters', count: currentStats.pendingVerifications, color: '#F97316', action: () => router.push('/(admin)/porters') },
     { title: 'Resolve Issues', count: 3, color: '#DC2626', action: () => {} },
     { title: 'View Reports', count: 0, color: '#059669', action: () => {} },
   ];
@@ -63,6 +66,32 @@ export default function AdminDashboardScreen() {
     { type: 'info', message: 'Peak hours: 2-4 PM today', action: 'View Details' },
     { type: 'error', message: '3 customer complaints unresolved', action: 'Resolve' },
   ];
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert('Error', error.message);
+              } else {
+                router.push('/(auth)/login');
+              }
+            } catch (logoutError) {
+              console.error('Logout error:', logoutError);
+              Alert.alert('Error', 'An unexpected error occurred during logout.');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>

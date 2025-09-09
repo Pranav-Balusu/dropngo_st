@@ -26,7 +26,7 @@ import {
   Plus,
   Building
 } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase'; // Import the Supabase client
 
 // Assuming you have this type defined in '@/types/pricing.ts'
 type PricingConfig = {
@@ -96,14 +96,8 @@ export default function AdminSettingsScreen() {
     }
   };
 
-  const handleSaveSettings = async () => {
-    try {
-      console.log('Saving system settings:', systemSettings);
-      Alert.alert('Success', 'System settings updated successfully!');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      Alert.alert('Error', 'Failed to save settings. Please try again.');
-    }
+  const handleSaveSettings = () => {
+    Alert.alert('Success', 'System settings updated successfully!');
   };
 
   const handleAddHub = () => {
