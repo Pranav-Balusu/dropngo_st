@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { User, Mail, Phone, MapPin, CreditCard as Edit, Bell, Shield, CreditCard, LogOut, Star, Package, Clock, Settings } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase'; // Import the Supabase client
+import { supabase } from '@/lib/supabase';
 
 export default function UserProfileScreen() {
   const [editing, setEditing] = useState(false);
@@ -47,7 +47,7 @@ export default function UserProfileScreen() {
     Alert.alert('Success', 'Profile updated successfully!');
   };
 
-  const handleLogout = async () => { // Make the function async
+  const handleLogout = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -57,7 +57,7 @@ export default function UserProfileScreen() {
           text: 'Logout', 
           onPress: async () => {
             try {
-              const { error } = await supabase.auth.signOut(); // Call the Supabase logout method
+              const { error } = await supabase.auth.signOut();
               if (error) {
                 Alert.alert('Error', error.message);
               } else {

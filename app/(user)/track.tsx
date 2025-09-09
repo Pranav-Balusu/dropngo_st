@@ -190,11 +190,13 @@ export default function TrackingScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.liveTrackButton}>
+        <TouchableOpacity 
+          style={styles.liveTrackButton}
+          onPress={() => setMapVisible(true)}
+        >
           <LinearGradient
             colors={['#3B82F6', '#1E40AF']}
             style={styles.liveTrackGradient}
-            onPress={() => setMapVisible(true)}
           >
             <Navigation size={20} color="#FFFFFF" />
             <Text style={styles.liveTrackText}>Live GPS Tracking</Text>
@@ -209,14 +211,6 @@ export default function TrackingScreen() {
               <Text style={styles.summaryValue}>
                 {currentBooking.serviceType === 'pickup' ? 'Pickup Service' : 'Self-Service'}
               </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Storage Fee:</Text>
-              <Text style={styles.summaryValue}>₹{(currentBooking.totalAmount * 0.8).toFixed(2)}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Delivery Fee:</Text>
-              <Text style={styles.summaryValue}>₹{(currentBooking.totalAmount * 0.2).toFixed(2)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Total Amount:</Text>

@@ -7,6 +7,8 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  TextInput,
+  Switch
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -19,18 +21,59 @@ import {
   MapPin,
   Clock,
   Star,
-  Shield
+  Shield,
+  IndianRupee,
+  Square,
+  ChevronsRight,
+  Plus,
+  Minus
 } from 'lucide-react-native';
-import PriceCalculator from '@/components/PriceCalculator';
 import { supabase } from '@/lib/supabase';
 
+// Define the PricingConfig type to solve TypeScript errors
+type PricingConfig = {
+  'self-service': {
+    small: number;
+    medium: number;
+    large: number;
+    'extra-large': number;
+  };
+  pickup: {
+    small: number;
+    medium: number;
+    large: number;
+    'extra-large': number;
+  };
+  basePickupFee: number;
+  perKmFee: number;
+};
+
+// Define a type for the luggage state to provide a clear index signature
+type LuggageState = {
+  small: number;
+  medium: number;
+  large: number;
+  'extra-large': number;
+};
+
 export default function BookingScreen() {
-  const [calculatorVisible, setCalculatorVisible] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [pickupLocation, setPickupLocation] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [luggage, setLuggage] = useState<LuggageState>({
+    small: 0,
+    medium: 0,
+    large: 0,
+    'extra-large': 0,
+  });
+  const [duration, setDuration] = useState(1);
+  const [pricing, setPricing] = useState<PricingConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [insurance, setInsurance] = useState(false);
 
   useEffect(() => {
     getCurrentUser();
+    loadPricing();
   }, []);
 
   const getCurrentUser = async () => {
@@ -45,43 +88,95 @@ export default function BookingScreen() {
     }
   };
 
-  const popularDestinations = [
-    { name: 'Mumbai Airport T1', price: 'From ₹140', time: '2-4 hrs', rating: 4.8 },
-    { name: 'Mumbai Airport T2', price: 'From ₹140', time: '2-4 hrs', rating: 4.9 },
-    { name: 'Mumbai Central', price: 'From ₹105', time: '1-3 hrs', rating: 4.7 },
-    { name: 'Bandra Station', price: 'From ₹90', time: '1-2 hrs', rating: 4.6 },
+  const loadPricing = async () => {
+    try {
+      const currentPricing = await getCurrentPricing();
+      setPricing(currentPricing);
+    } catch (error) {
+      console.error('Error loading pricing:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const luggageSizes = [
+    { key: 'small', label: 'Small', description: 'Up to 15 kg' },
+    { key: 'medium', label: 'Medium', description: 'Up to 25 kg' },
+    { key: 'large', label: 'Large', description: 'Up to 35 kg' },
+    { key: 'extra-large', label: 'Extra Large', description: 'Over 35 kg' },
   ];
 
-  const features = [
-    { title: 'Secure Storage', description: 'CCTV monitored facilities', icon: Shield },
-    { title: 'Real-time Tracking', description: 'Track your luggage live', icon: MapPin },
-    { title: 'Verified Porters', description: 'KYC verified professionals', icon: Star },
-    { title: 'Flexible Timing', description: 'Store from 1 hour to 7 days', icon: Clock },
-  ];
+  const calculateTotal = () => {
+    if (!pricing) return 0;
 
-  const handlePriceSelection = async (total, details) => {
+    let storageCost = 0;
+    Object.keys(luggage).forEach((size) => {
+      // Corrected access with explicit casting
+      storageCost += luggage[size as keyof LuggageState] * duration * pricing.pickup[size as keyof PricingConfig['pickup']];
+    });
+
+    const deliveryDistance = 15;
+    const deliveryCost = (pricing.basePickupFee || 0) + (deliveryDistance * (pricing.perKmFee || 0));
+
+    let total = storageCost + deliveryCost;
+    if (insurance) {
+      total += 50; // Flat fee for insurance
+    }
+
+    return total;
+  };
+
+  const handleBook = async () => {
     if (!currentUser) {
       Alert.alert('Error', 'Please login to continue');
       return;
     }
 
+    if (!pickupLocation || !deliveryLocation || Object.values(luggage).every(count => count === 0)) {
+        Alert.alert('Error', 'Please provide pickup/delivery locations and luggage details.');
+        return;
+    }
+
+    const total = calculateTotal();
+    const bookingDetails = {
+        pickupLocation,
+        deliveryLocation,
+        luggage,
+        duration,
+        insurance,
+        total,
+        serviceType: 'pickup',
+    };
+
     try {
-      const booking = await processBooking(currentUser.id, details);
+      // Simulate booking process
+      const bookingId = `DN${Date.now().toString().slice(-6)}`;
       
       Alert.alert(
         'Booking Confirmed',
-        `Total: ₹${total.toFixed(2)}\nBooking ID: ${booking.booking_number}\nItems: ${details.totalItems}\nService: ${details.serviceType}`,
+        `Total: ₹${total.toFixed(2)}\nBooking ID: ${bookingId}`,
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Track Booking', onPress: () => router.push('/(user)/track') }
+          { text: 'OK', onPress: () => router.push('/(user)/track') }
         ]
       );
     } catch (error) {
       console.error('Booking error:', error);
       Alert.alert('Error', 'Failed to create booking. Please try again.');
     }
-    setCalculatorVisible(false);
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <LinearGradient
+          colors={['#3B82F6', '#1E40AF']}
+          style={styles.header}
+        >
+          <Text style={styles.headerTitle}>Loading...</Text>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -89,116 +184,106 @@ export default function BookingScreen() {
         colors={['#3B82F6', '#1E40AF']}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Book Storage</Text>
-        <Text style={styles.headerSubtitle}>Store your luggage securely</Text>
+        <Text style={styles.headerTitle}>Book Luggage Service</Text>
+        <Text style={styles.headerSubtitle}>Pickup & Delivery</Text>
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity
-          style={styles.calculatorButton}
-          onPress={() => setCalculatorVisible(true)}
-        >
-          <LinearGradient
-            colors={['#F97316', '#EA580C']}
-            style={styles.calculatorGradient}
-          >
-            <Calculator size={24} color="#FFFFFF" />
-            <Text style={styles.calculatorText}>Calculate Price & Book</Text>
-            <ArrowRight size={20} color="#FFFFFF" />
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Service Details</Text>
+          <View style={styles.locationContainer}>
+            <View style={styles.locationInput}>
+              <MapPin size={20} color="#3B82F6" />
+              <TextInput
+                style={styles.input}
+                placeholder="Pickup Location"
+                value={pickupLocation}
+                onChangeText={setPickupLocation}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+            <View style={styles.locationSeparator}>
+              <ChevronsRight size={20} color="#6B7280" />
+            </View>
+            <View style={styles.locationInput}>
+              <MapPin size={20} color="#F97316" />
+              <TextInput
+                style={styles.input}
+                placeholder="Delivery Location"
+                value={deliveryLocation}
+                onChangeText={setDeliveryLocation}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          </View>
 
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Why Choose LugFree?</Text>
-          <View style={styles.featuresGrid}>
-            {features.map((feature, index) => (
-              <View key={index} style={styles.featureCard}>
-                <View style={styles.featureIcon}>
-                  <feature.icon size={20} color="#3B82F6" />
+          <View style={styles.inputContainer}>
+            <Clock size={20} color="#6B7280" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Duration in hours"
+              value={duration.toString()}
+              onChangeText={(text) => setDuration(parseInt(text) || 0)}
+              keyboardType="numeric"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        </View>
+
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Luggage Details</Text>
+          <View style={styles.luggageGrid}>
+            {luggageSizes.map((size) => (
+              <View key={size.key} style={styles.luggageItem}>
+                <Square size={24} color="#6B7280" />
+                <Text style={styles.luggageLabel}>{size.label}</Text>
+                <Text style={styles.luggageDescription}>{size.description}</Text>
+                <View style={styles.luggageCounter}>
+                  <TouchableOpacity onPress={() => setLuggage(prev => ({ ...prev, [size.key]: Math.max(0, prev[size.key as keyof LuggageState] - 1) }))}>
+                    <Minus size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                  <Text style={styles.luggageCount}>{luggage[size.key as keyof LuggageState]}</Text>
+                  <TouchableOpacity onPress={() => setLuggage(prev => ({ ...prev, [size.key]: prev[size.key as keyof LuggageState] + 1 }))}>
+                    <Plus size={20} color="#3B82F6" />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View style={styles.destinationsSection}>
-          <Text style={styles.sectionTitle}>Popular Destinations</Text>
-          {popularDestinations.map((destination, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={styles.destinationCard}
-              onPress={() => setCalculatorVisible(true)}
-            >
-              <View style={styles.destinationInfo}>
-                <Text style={styles.destinationName}>{destination.name}</Text>
-                <View style={styles.destinationMeta}>
-                  <View style={styles.metaItem}>
-                    <Clock size={12} color="#6B7280" />
-                    <Text style={styles.metaText}>{destination.time}</Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Star size={12} color="#F59E0B" />
-                    <Text style={styles.metaText}>{destination.rating}</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.destinationPrice}>
-                <Text style={styles.priceText}>{destination.price}</Text>
-                <ArrowRight size={16} color="#6B7280" />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.howItWorksSection}>
-          <Text style={styles.sectionTitle}>How It Works</Text>
-          <View style={styles.stepsContainer}>
-            <View style={styles.step}>
-              <View style={[styles.stepNumber, { backgroundColor: '#3B82F6' }]}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Book & Calculate</Text>
-                <Text style={styles.stepDescription}>
-                  Select destination, luggage type, and duration
-                </Text>
-              </View>
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Booking Summary</Text>
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Storage Fees ({duration} hrs):</Text>
+              <Text style={styles.summaryValue}>₹{calculateTotal().toFixed(2)}</Text>
             </View>
-            
-            <View style={styles.step}>
-              <View style={[styles.stepNumber, { backgroundColor: '#F97316' }]}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Store or Pickup</Text>
-                <Text style={styles.stepDescription}>
-                  Drop at our locker or request pickup service
-                </Text>
-              </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Pickup & Delivery Fees:</Text>
+              <Text style={styles.summaryValue}>₹{((pricing?.basePickupFee || 0) + (15 * (pricing?.perKmFee || 0))).toFixed(2)}</Text>
             </View>
-            
-            <View style={styles.step}>
-              <View style={[styles.stepNumber, { backgroundColor: '#059669' }]}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>Track & Collect</Text>
-                <Text style={styles.stepDescription}>
-                  Real-time tracking until delivery to your destination
-                </Text>
-              </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Insurance (optional):</Text>
+              <Switch
+                value={insurance}
+                onValueChange={setInsurance}
+                trackColor={{ false: '#E5E7EB', true: '#DBEAFE' }}
+                thumbColor={insurance ? '#3B82F6' : '#9CA3AF'}
+              />
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Amount:</Text>
+              <Text style={styles.summaryAmount}>₹{calculateTotal().toFixed(2)}</Text>
             </View>
           </View>
         </View>
-      </ScrollView>
 
-      <PriceCalculator
-        visible={calculatorVisible}
-        onClose={() => setCalculatorVisible(false)}
-        onSelect={handlePriceSelection}
-      />
+        <TouchableOpacity style={styles.bookButton} onPress={handleBook}>
+          <Text style={styles.bookButtonText}>Book Now</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -228,37 +313,63 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
   },
-  calculatorButton: {
-    marginBottom: 32,
-  },
-  calculatorGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 16,
-    gap: 12,
-  },
-  calculatorText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  featuresSection: {
-    marginBottom: 32,
+  formSection: {
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 16,
   },
-  featuresGrid: {
+  locationContainer: {
+    marginBottom: 16,
+  },
+  locationInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  locationSeparator: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  input: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  luggageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  featureCard: {
+  luggageItem: {
     width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -270,79 +381,28 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F0F8FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  featureDescription: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  destinationsSection: {
-    marginBottom: 32,
-  },
-  destinationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  destinationInfo: {
-    flex: 1,
-  },
-  destinationName: {
+  luggageLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 8,
+    marginTop: 8,
   },
-  destinationMeta: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
+  luggageDescription: {
     fontSize: 12,
     color: '#6B7280',
+    marginBottom: 12,
   },
-  destinationPrice: {
+  luggageCounter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  priceText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#059669',
+  luggageCount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
   },
-  howItWorksSection: {
-    marginBottom: 32,
-  },
-  stepsContainer: {
+  summaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
@@ -352,36 +412,41 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  step: {
+  summaryRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
-  stepNumber: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  stepNumberText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  stepContent: {
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  stepDescription: {
+  summaryLabel: {
     fontSize: 14,
     color: '#6B7280',
-    lineHeight: 20,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  summaryAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#059669',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+  },
+  bookButton: {
+    backgroundColor: '#F97316',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  bookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
