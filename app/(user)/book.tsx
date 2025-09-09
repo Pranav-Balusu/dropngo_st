@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
 import {
   View,
   Text,
@@ -11,6 +10,7 @@ import {
   TextInput,
   Switch,
   Modal,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -24,7 +24,6 @@ import {
   Plus,
   Minus,
   X as CloseIcon,
-  Crosshair,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import MapView, { Marker } from 'react-native-maps';
@@ -428,7 +427,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 16, // Increased padding to make it look like a button
+    paddingVertical: 16,
   },
   locationSeparator: {
     alignItems: 'center',
@@ -548,7 +547,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // New styles for the map modal
   mapContainer: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? 25 : 0,
