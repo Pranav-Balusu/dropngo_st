@@ -22,9 +22,11 @@ import {
   Wifi,
   Eye,
   Navigation,
-  Package
+  Package,
+  LogOut
 } from 'lucide-react-native';
 import PriceCalculator from '@/components/PriceCalculator';
+import { supabase } from '@/lib/supabase';
 
 export default function UserHomeScreen() {
   const [calculatorVisible, setCalculatorVisible] = useState(false);
@@ -59,6 +61,32 @@ export default function UserHomeScreen() {
     );
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert('Error', error.message);
+              } else {
+                router.push('/(auth)/login');
+              }
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'An unexpected error occurred during logout.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -69,6 +97,9 @@ export default function UserHomeScreen() {
           <View style={styles.headerContent}>
             <Text style={styles.greeting}>Welcome to DropNGo!</Text>
             <Text style={styles.location}>📍 {userLocation}</Text>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <LogOut size={24} color="#FFFFFF" />
+            </TouchableOpacity>
             
             <View style={styles.statsContainer}>
               <View style={styles.statCard}>
@@ -93,7 +124,7 @@ export default function UserHomeScreen() {
         <View style={styles.content}>
           <TouchableOpacity
             style={styles.calculatorButton}
-            onPress={() => setCalculatorVisible(true)}
+            onPress={() => router.push('/(user)/book')}
           >
             <LinearGradient
               colors={['#F97316', '#EA580C']}
@@ -110,27 +141,27 @@ export default function UserHomeScreen() {
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
                 <Shield size={20} color="#059669" />
-                <Text style={styles.featureText}>100% Secure Storage</Text>
+                <Text style={styles.featureItemText}>100% Secure Storage</Text>
               </View>
               <View style={styles.featureItem}>
                 <MapPin size={20} color="#059669" />
-                <Text style={styles.featureText}>Real-time Tracking</Text>
+                <Text style={styles.featureItemText}>Real-time Tracking</Text>
               </View>
               <View style={styles.featureItem}>
                 <Clock size={20} color="#059669" />
-                <Text style={styles.featureText}>24/7 Service</Text>
+                <Text style={styles.featureItemText}>24/7 Service</Text>
               </View>
               <View style={styles.featureItem}>
                 <Star size={20} color="#059669" />
-                <Text style={styles.featureText}>Verified Porters</Text>
+                <Text style={styles.featureItemText}>Verified Porters</Text>
               </View>
               <View style={styles.featureItem}>
                 <Camera size={20} color="#059669" />
-                <Text style={styles.featureText}>Photo Verification</Text>
+                <Text style={styles.featureItemText}>Photo Verification</Text>
               </View>
               <View style={styles.featureItem}>
                 <Eye size={20} color="#059669" />
-                <Text style={styles.featureText}>CCTV Monitored</Text>
+                <Text style={styles.featureItemText}>CCTV Monitored</Text>
               </View>
             </View>
           </View>
@@ -165,12 +196,6 @@ export default function UserHomeScreen() {
           )}
         </View>
       </ScrollView>
-
-      <PriceCalculator
-        visible={calculatorVisible}
-        onClose={() => setCalculatorVisible(false)}
-        onSelect={handlePriceSelection}
-      />
     </SafeAreaView>
   );
 }
@@ -187,6 +212,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     alignItems: 'center',
+    position: 'relative',
   },
   greeting: {
     fontSize: 24,
@@ -198,6 +224,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#E5E7EB',
     marginTop: 8,
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 16,
+    right: 0,
+    padding: 8,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -225,120 +257,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
   },
-  cloakroomsSection: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  cloakroomCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    overflow: 'hidden',
-  },
-  cloakroomImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#F3F4F6',
-  },
-  cloakroomInfo: {
-    padding: 16,
-  },
-  cloakroomHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cloakroomName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  distance: {
-    fontSize: 12,
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  cloakroomLocation: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 12,
-  },
-  cloakroomMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  rating: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  reviews: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  availabilityContainer: {
-    marginBottom: 12,
-  },
-  lockersInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  lockersText: {
-    fontSize: 12,
-    color: '#059669',
-    fontWeight: '600',
-  },
-  featuresContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  featureTag: {
-    backgroundColor: '#F0F8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  featureText: {
-    fontSize: 10,
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  moreFeatures: {
-    fontSize: 10,
-    color: '#6B7280',
-    fontStyle: 'italic',
-  },
   calculatorButton: {
     marginBottom: 32,
   },
@@ -358,6 +276,12 @@ const styles = StyleSheet.create({
   featuresSection: {
     marginBottom: 32,
   },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 16,
+  },
   featuresList: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -376,6 +300,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '48%',
     gap: 8,
+  },
+  featureItemText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
   },
   recentSection: {
     marginBottom: 32,
