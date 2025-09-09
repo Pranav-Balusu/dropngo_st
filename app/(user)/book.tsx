@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import {
   View,
   Text,
@@ -8,29 +9,28 @@ import {
   ScrollView,
   Alert,
   TextInput,
-  Switch
+  Switch,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { getCurrentPricing } from '@/services/pricingService';
-import { processBooking } from '@/services/bookingService';
 import { 
   Package, 
-  Calculator,
-  ArrowRight,
   MapPin,
   Clock,
-  Star,
-  Shield,
-  IndianRupee,
   Square,
   ChevronsRight,
   Plus,
-  Minus
+  Minus,
+  X as CloseIcon,
+  Crosshair,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 
-// Define the PricingConfig type to solve TypeScript errors
+// Define the PricingConfig type
 type PricingConfig = {
   'self-service': {
     small: number;
@@ -48,12 +48,20 @@ type PricingConfig = {
   perKmFee: number;
 };
 
-// Define a type for the luggage state to provide a clear index signature
+// Define a type for the luggage state
 type LuggageState = {
   small: number;
   medium: number;
   large: number;
   'extra-large': number;
+};
+
+// Define the LocationType for map coordinates
+type LocationType = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
 };
 
 export default function BookingScreen() {
@@ -70,6 +78,9 @@ export default function BookingScreen() {
   const [pricing, setPricing] = useState<PricingConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [insurance, setInsurance] = useState(false);
+  const [mapModalVisible, setMapModalVisible] = useState(false);
+  const [mapRegion, setMapRegion] = useState<LocationType | null>(null);
+  const [locationType, setLocationType] = useState<'pickup' | 'delivery' | null>(null);
 
   useEffect(() => {
     getCurrentUser();
@@ -111,16 +122,15 @@ export default function BookingScreen() {
 
     let storageCost = 0;
     Object.keys(luggage).forEach((size) => {
-      // Corrected access with explicit casting
       storageCost += luggage[size as keyof LuggageState] * duration * pricing.pickup[size as keyof PricingConfig['pickup']];
     });
 
-    const deliveryDistance = 15;
+    const deliveryDistance = 15; // Placeholder for a dynamic distance calculation
     const deliveryCost = (pricing.basePickupFee || 0) + (deliveryDistance * (pricing.perKmFee || 0));
 
     let total = storageCost + deliveryCost;
     if (insurance) {
-      total += 50; // Flat fee for insurance
+      total += 50;
     }
 
     return total;
@@ -165,6 +175,42 @@ export default function BookingScreen() {
     }
   };
 
+  const openMap = async (type: 'pickup' | 'delivery') => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission to access location was denied');
+      return;
+    }
+
+    let location = await Location.getCurrentPositionAsync({});
+    setMapRegion({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+    setLocationType(type);
+    setMapModalVisible(true);
+  };
+
+  const handleMapConfirm = async () => {
+    if (mapRegion) {
+      const address = await Location.reverseGeocodeAsync({
+        latitude: mapRegion.latitude,
+        longitude: mapRegion.longitude,
+      });
+
+      const fullAddress = address[0] ? `${address[0].name}, ${address[0].city}` : 'Selected Location';
+      
+      if (locationType === 'pickup') {
+        setPickupLocation(fullAddress);
+      } else if (locationType === 'delivery') {
+        setDeliveryLocation(fullAddress);
+      }
+    }
+    setMapModalVisible(false);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -192,29 +238,25 @@ export default function BookingScreen() {
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Service Details</Text>
           <View style={styles.locationContainer}>
-            <View style={styles.locationInput}>
-              <MapPin size={20} color="#3B82F6" />
-              <TextInput
-                style={styles.input}
-                placeholder="Pickup Location"
-                value={pickupLocation}
-                onChangeText={setPickupLocation}
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
+            <TouchableOpacity onPress={() => openMap('pickup')} style={styles.locationButton}>
+              <View style={styles.locationInput}>
+                <MapPin size={20} color="#3B82F6" />
+                <Text style={styles.input}>
+                  {pickupLocation || 'Select Pickup Location'}
+                </Text>
+              </View>
+            </TouchableOpacity>
             <View style={styles.locationSeparator}>
               <ChevronsRight size={20} color="#6B7280" />
             </View>
-            <View style={styles.locationInput}>
-              <MapPin size={20} color="#F97316" />
-              <TextInput
-                style={styles.input}
-                placeholder="Delivery Location"
-                value={deliveryLocation}
-                onChangeText={setDeliveryLocation}
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
+            <TouchableOpacity onPress={() => openMap('delivery')} style={styles.locationButton}>
+              <View style={styles.locationInput}>
+                <MapPin size={20} color="#F97316" />
+                <Text style={styles.input}>
+                  {deliveryLocation || 'Select Delivery Location'}
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputContainer}>
@@ -297,6 +339,41 @@ export default function BookingScreen() {
           <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Map Selection Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={mapModalVisible}
+        onRequestClose={() => setMapModalVisible(false)}
+      >
+        <SafeAreaView style={styles.mapContainer}>
+          <View style={styles.mapHeader}>
+            <TouchableOpacity onPress={() => setMapModalVisible(false)} style={styles.closeMapButton}>
+              <CloseIcon size={24} color="#111827" />
+            </TouchableOpacity>
+            <Text style={styles.mapTitle}>Select {locationType === 'pickup' ? 'Pickup' : 'Delivery'} Location</Text>
+          </View>
+          
+          {mapRegion && (
+            <MapView
+              style={styles.map}
+              initialRegion={mapRegion}
+              onRegionChangeComplete={setMapRegion}
+            >
+              <Marker
+                coordinate={{ latitude: mapRegion.latitude, longitude: mapRegion.longitude }}
+              />
+            </MapView>
+          )}
+
+          <View style={styles.mapControls}>
+            <TouchableOpacity style={styles.confirmMapButton} onPress={handleMapConfirm}>
+              <Text style={styles.confirmMapText}>Confirm Location</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -338,18 +415,20 @@ const styles = StyleSheet.create({
   locationContainer: {
     marginBottom: 16,
   },
+  locationButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   locationInput: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingVertical: 16, // Increased padding to make it look like a button
   },
   locationSeparator: {
     alignItems: 'center',
@@ -465,6 +544,53 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   bookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // New styles for the map modal
+  mapContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 25 : 0,
+    backgroundColor: '#F9FAFB',
+  },
+  mapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    position: 'relative',
+  },
+  closeMapButton: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
+  mapTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+    width: '100%',
+  },
+  mapControls: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  confirmMapButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  confirmMapText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
