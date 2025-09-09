@@ -37,13 +37,31 @@ export default function LoginScreen() {
       if (error) {
         Alert.alert('Login Failed', error.message);
       } else if (data.user) {
-        if (email.includes('admin')) {
-          // Corrected path to match the router's type definition
-          router.replace('/(admin)'); 
-        } else if (email.includes('porter')) {
-          router.replace('/(porter)');
+        // Fetch user's role from your database table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (userError) {
+          Alert.alert('Error', 'Could not retrieve user data. Please try again.');
+          console.error(userError);
+          await supabase.auth.signOut();
         } else {
-          router.replace('/(user)');
+          // Route based on the role from the database
+          switch (userData.role) {
+            case 'admin':
+              router.replace('/(admin)');
+              break;
+            case 'porter':
+              router.replace('/(porter)');
+              break;
+            case 'user':
+            default:
+              router.replace('/(user)');
+              break;
+          }
         }
       }
     } catch (error) {
