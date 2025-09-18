@@ -7,23 +7,26 @@ import {
   SafeAreaView,
   ScrollView,
   TextInput,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Search,
-  Filter,
   Package,
   MapPin,
   Clock,
   User,
-  IndianRupee,
   Eye,
-  MessageCircle
+  MessageCircle,
+  Star,
+  X
 } from 'lucide-react-native';
 
 export default function AdminBookingsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const bookings = [
     {
@@ -39,6 +42,11 @@ export default function AdminBookingsScreen() {
       luggageCount: 2,
       serviceType: 'pickup',
       rating: 5,
+      luggage: [
+        { type: 'Medium Suitcase', count: 1 },
+        { type: 'Small Bag', count: 1 }
+      ],
+      notes: 'Handle with care. Customer will call before pickup.',
     },
     {
       id: 'DN001235',
@@ -53,6 +61,10 @@ export default function AdminBookingsScreen() {
       luggageCount: 1,
       serviceType: 'self-service',
       rating: null,
+      luggage: [
+        { type: 'Large Suitcase', count: 1 }
+      ],
+      notes: '',
     },
     {
       id: 'DN001236',
@@ -67,6 +79,11 @@ export default function AdminBookingsScreen() {
       luggageCount: 3,
       serviceType: 'pickup',
       rating: null,
+      luggage: [
+        { type: 'Small Bag', count: 2 },
+        { type: 'Medium Suitcase', count: 1 }
+      ],
+      notes: 'Customer requested early delivery if possible.',
     },
   ];
 
@@ -184,7 +201,13 @@ export default function AdminBookingsScreen() {
                 )}
               </View>
               <View style={styles.bookingActions}>
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => {
+                    setSelectedBooking(booking);
+                    setModalVisible(true);
+                  }}
+                >
                   <Eye size={16} color="#3B82F6" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton}>
@@ -195,6 +218,72 @@ export default function AdminBookingsScreen() {
           </View>
         ))}
       </ScrollView>
+
+      {/* Booking Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Booking Details</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            {selectedBooking && (
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Booking Info</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Booking ID:</Text> {selectedBooking.id}</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Status:</Text> {selectedBooking.status}</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Service:</Text> {selectedBooking.serviceType}</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Amount:</Text> ₹{selectedBooking.amount}</Text>
+                </View>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>User & Porter</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>User:</Text> {selectedBooking.user}</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Porter:</Text> {selectedBooking.porter}</Text>
+                </View>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Locations & Time</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Pickup:</Text> {selectedBooking.pickupLocation} ({selectedBooking.pickupTime})</Text>
+                  <Text style={styles.modalField}><Text style={styles.modalLabel}>Delivery:</Text> {selectedBooking.deliveryLocation} ({selectedBooking.deliveryTime})</Text>
+                </View>
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Luggage</Text>
+                  {selectedBooking.luggage && selectedBooking.luggage.map((item: any, idx: number) => (
+                    <Text key={idx} style={styles.modalField}>
+                      <Text style={styles.modalLabel}>{item.type}:</Text> {item.count}
+                    </Text>
+                  ))}
+                </View>
+                {selectedBooking.notes ? (
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>Notes</Text>
+                    <Text style={styles.modalField}>{selectedBooking.notes}</Text>
+                  </View>
+                ) : null}
+                {selectedBooking.rating && (
+                  <View style={styles.modalSection}>
+                    <Text style={styles.modalSectionTitle}>Rating</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Star size={18} color="#F59E0B" />
+                      <Text style={styles.modalField}>{selectedBooking.rating} / 5</Text>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -353,4 +442,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalSection: {
+    marginBottom: 18,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  modalField: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  modalLabel:
