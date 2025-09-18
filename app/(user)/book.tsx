@@ -11,12 +11,12 @@ import {
   Switch,
   Modal,
   Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { getCurrentPricing } from '@/services/pricingService';
 import { 
-  Package, 
   MapPin,
   Clock,
   Square,
@@ -24,12 +24,13 @@ import {
   Plus,
   Minus,
   X as CloseIcon,
+  Camera,
+  Trash2,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-
-
+import * as ImagePicker from 'expo-image-picker';
 
 // Define the PricingConfig type
 type PricingConfig = {
@@ -66,9 +67,11 @@ type LocationType = {
 };
 
 export default function BookingScreen() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [pickupLocation, setPickupLocation] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [pickupCoords, setPickupCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<{lat: number, lng: number} | null>(null);
   const [luggage, setLuggage] = useState<LuggageState>({
     small: 0,
     medium: 0,
@@ -82,23 +85,13 @@ export default function BookingScreen() {
   const [mapModalVisible, setMapModalVisible] = useState(false);
   const [mapRegion, setMapRegion] = useState<LocationType | null>(null);
   const [locationType, setLocationType] = useState<'pickup' | 'delivery' | null>(null);
+  const [luggagePhotos, setLuggagePhotos] = useState<string[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   useEffect(() => {
     getCurrentUser();
     loadPricing();
   }, []);
-
-  const openMapPicker = (type: 'pickup' | 'delivery') => {
-    setLocationType(type);
-    setMapModalVisible(true);
-  };
-
-  const handleMapSelect = (coordinate) => {
-  // Reverse geocode here if needed
-    if (locationType === 'pickup') setPickupLocation(`${coordinate.latitude},${coordinate.longitude}`);
-    else setDeliveryLocation(`${coordinate.latitude},${coordinate.longitude}`);
-    setMapModalVisible(false);
-  };
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -132,75 +125,30 @@ export default function BookingScreen() {
 
   const calculateTotal = () => {
     if (!pricing) return 0;
-
     let storageCost = 0;
     Object.keys(luggage).forEach((size) => {
       storageCost += luggage[size as keyof LuggageState] * duration * pricing.pickup[size as keyof PricingConfig['pickup']];
     });
-
     const deliveryDistance = 15; // Placeholder for a dynamic distance calculation
     const deliveryCost = (pricing.basePickupFee || 0) + (deliveryDistance * (pricing.perKmFee || 0));
-
     let total = storageCost + deliveryCost;
-    if (insurance) {
-      total += 50;
-    }
-
+    if (insurance) total += 50;
     return total;
   };
 
-  const handleBook = async () => {
-    if (!currentUser) {
-      Alert.alert('Error', 'Please login to continue');
-      return;
-    }
-
-    if (!pickupLocation || !deliveryLocation || Object.values(luggage).every(count => count === 0)) {
-        Alert.alert('Error', 'Please provide pickup/delivery locations and luggage details.');
-        return;
-    }
-
-    const total = calculateTotal();
-    const bookingDetails = {
-        pickupLocation,
-        deliveryLocation,
-        luggage,
-        duration,
-        insurance,
-        total,
-        serviceType: 'pickup',
-    };
-
-    try {
-      // Simulate booking process
-      const bookingId = `DN${Date.now().toString().slice(-6)}`;
-      
-      Alert.alert(
-        'Booking Confirmed',
-        `Total: ₹${total.toFixed(2)}\nBooking ID: ${bookingId}`,
-        [
-          { text: 'OK', onPress: () => router.push('/(user)/track') }
-        ]
-      );
-    } catch (error) {
-      console.error('Booking error:', error);
-      Alert.alert('Error', 'Failed to create booking. Please try again.');
-    }
-  };
-
+  // Map Picker logic
   const openMap = async (type: 'pickup' | 'delivery') => {
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission to access location was denied');
       return;
     }
-
     let location = await Location.getCurrentPositionAsync({});
     setMapRegion({
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
     });
     setLocationType(type);
     setMapModalVisible(true);
@@ -212,16 +160,63 @@ export default function BookingScreen() {
         latitude: mapRegion.latitude,
         longitude: mapRegion.longitude,
       });
-
-      const fullAddress = address[0] ? `${address[0].name}, ${address[0].city}` : 'Selected Location';
-      
+      const fullAddress = address[0]
+        ? `${address[0].name || ''}, ${address[0].city || ''}, ${address[0].region || ''}`.replace(/^, /, '')
+        : 'Selected Location';
       if (locationType === 'pickup') {
         setPickupLocation(fullAddress);
+        setPickupCoords({ lat: mapRegion.latitude, lng: mapRegion.longitude });
       } else if (locationType === 'delivery') {
         setDeliveryLocation(fullAddress);
+        setDeliveryCoords({ lat: mapRegion.latitude, lng: mapRegion.longitude });
       }
     }
     setMapModalVisible(false);
+  };
+
+  // Luggage Photo Upload logic
+  const pickLuggagePhoto = async () => {
+    setPhotoUploading(true);
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setLuggagePhotos((prev) => [...prev, result.assets[0].uri]);
+    }
+    setPhotoUploading(false);
+  };
+
+  const removePhoto = (idx: number) => {
+    setLuggagePhotos((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleBook = async () => {
+    if (!currentUser) {
+      Alert.alert('Error', 'Please login to continue');
+      return;
+    }
+    if (!pickupLocation || !deliveryLocation || Object.values(luggage).every(count => count === 0)) {
+      Alert.alert('Error', 'Please provide pickup/delivery locations and luggage details.');
+      return;
+    }
+    if (luggagePhotos.length === 0) {
+      Alert.alert('Error', 'Please upload at least one luggage photo.');
+      return;
+    }
+    const total = calculateTotal();
+    // You can upload photos to Supabase Storage here if needed
+    // For now, just simulate booking
+    const bookingId = `DN${Date.now().toString().slice(-6)}`;
+    Alert.alert(
+      'Booking Confirmed',
+      `Total: ₹${total.toFixed(2)}\nBooking ID: ${bookingId}`,
+      [
+        { text: 'OK', onPress: () => router.push('/(user)/track') }
+      ]
+    );
   };
 
   if (loading) {
@@ -271,7 +266,6 @@ export default function BookingScreen() {
               </View>
             </TouchableOpacity>
           </View>
-
           <View style={styles.inputContainer}>
             <Clock size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
@@ -283,6 +277,26 @@ export default function BookingScreen() {
               placeholderTextColor="#9CA3AF"
             />
           </View>
+        </View>
+
+        {/* Luggage Photo Upload Section */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Luggage Photos *</Text>
+          <Text style={{ color: '#6B7280', marginBottom: 8 }}>Upload photos for verification during pickup/delivery</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+            {luggagePhotos.map((uri, idx) => (
+              <View key={idx} style={styles.photoPreview}>
+                <Image source={{ uri }} style={styles.photoImage} />
+                <TouchableOpacity style={styles.removePhotoBtn} onPress={() => removePhoto(idx)}>
+                  <Trash2 size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.addPhotoBtn} onPress={pickLuggagePhoto} disabled={photoUploading}>
+              <Camera size={28} color="#3B82F6" />
+              <Text style={{ color: '#3B82F6', fontSize: 12, marginTop: 2 }}>Add Photo</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         <View style={styles.formSection}>
@@ -367,7 +381,6 @@ export default function BookingScreen() {
             </TouchableOpacity>
             <Text style={styles.mapTitle}>Select {locationType === 'pickup' ? 'Pickup' : 'Delivery'} Location</Text>
           </View>
-          
           {mapRegion && (
             <MapView
               style={styles.map}
@@ -379,7 +392,6 @@ export default function BookingScreen() {
               />
             </MapView>
           )}
-
           <View style={styles.mapControls}>
             <TouchableOpacity style={styles.confirmMapButton} onPress={handleMapConfirm}>
               <Text style={styles.confirmMapText}>Confirm Location</Text>
@@ -606,5 +618,36 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  photoPreview: {
+    marginRight: 12,
+    position: 'relative',
+  },
+  photoImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+  },
+  removePhotoBtn: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: '#F97316',
+    borderRadius: 10,
+    padding: 2,
+    zIndex: 2,
+  },
+  addPhotoBtn: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    marginRight: 12,
   },
 });
