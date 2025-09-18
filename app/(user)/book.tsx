@@ -29,6 +29,8 @@ import { supabase } from '@/lib/supabase';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
+
+
 // Define the PricingConfig type
 type PricingConfig = {
   'self-service': {
@@ -85,6 +87,18 @@ export default function BookingScreen() {
     getCurrentUser();
     loadPricing();
   }, []);
+
+  const openMapPicker = (type: 'pickup' | 'delivery') => {
+    setLocationType(type);
+    setMapModalVisible(true);
+  };
+
+  const handleMapSelect = (coordinate) => {
+  // Reverse geocode here if needed
+    if (locationType === 'pickup') setPickupLocation(`${coordinate.latitude},${coordinate.longitude}`);
+    else setDeliveryLocation(`${coordinate.latitude},${coordinate.longitude}`);
+    setMapModalVisible(false);
+  };
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();

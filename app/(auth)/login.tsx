@@ -13,8 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Luggage, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-// You don't need the supabase import for this mock version
-// import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,65 +21,38 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // if (!email || !password) {
-    //   Alert.alert('Error', 'Please fill in all fields');
-    //   return;
-    // }
-
-    // setLoading(true);
-    
-    // // Mock user credentials
-    // const mockUsers = {
-    //   'user@dropngo.com': '12345678',
-    //   'porter@dropngo.com': '12345678',
-    //   'admin@dropngo.com': '12345678',
-    // };
-
-    // // Check against mock credentials
-    // if (mockUsers[email] === password) {
-    //   // Simulate successful login and route based on email
-    //   if (email.includes('admin')) {
-    //     router.replace('/(admin)');
-    //   } else if (email.includes('porter')) {
-    //     router.replace('/(porter)');
-    //   } else {
-    //     router.replace('/(user)');
-    //   }
-    // } else {
-    //   Alert.alert('Login Failed', 'Invalid email or password.');
-    // }
-    
-    // setLoading(false);
+  const handleLogin = async () => {
     if (!email || !password) {
-    Alert.alert('Error', 'Please fill in all fields');
-    return;
-  }
-  setLoading(true);
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      Alert.alert('Login Failed', error.message);
-    } else {
-      // Fetch user profile to determine role
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('user_type')
-        .eq('email', email)
-        .single();
-      if (userProfile?.user_type === 'admin') {
-        router.replace('/(admin)');
-      } else if (userProfile?.user_type === 'porter') {
-        router.replace('/(porter)');
-      } else {
-        router.replace('/(user)');
-      }
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
     }
-  } catch (err) {
-    Alert.alert('Error', 'Unexpected error during login');
-  } finally {
-    setLoading(false);
-  }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        Alert.alert('Login Failed', error.message);
+      } else {
+        // Fetch user profile to determine role
+        const { data: userProfile, error: userError } = await supabase
+          .from('users')
+          .select('user_type')
+          .eq('email', email)
+          .single();
+        if (userError) {
+          Alert.alert('Login Failed', 'Could not fetch user profile.');
+        } else if (userProfile?.user_type === 'admin') {
+          router.replace('/(admin)');
+        } else if (userProfile?.user_type === 'porter') {
+          router.replace('/(porter)');
+        } else {
+          router.replace('/(user)');
+        }
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Unexpected error during login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -299,4 +271,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-});
