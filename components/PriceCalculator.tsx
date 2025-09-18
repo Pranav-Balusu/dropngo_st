@@ -36,7 +36,7 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   const [luggageItems, setLuggageItems] = useState<LuggageItem[]>([]);
   const [luggagePhotos, setLuggagePhotos] = useState<string[]>([]);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
-  
+
   const pricing = {
     'self-service': {
       small: 3.5,
@@ -91,16 +91,13 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
         Alert.alert('Permission denied', 'Location permission is required for better service');
         return;
       }
-
       const location = await Location.getCurrentPositionAsync({});
       setCurrentLocation(location);
-      
       // Reverse geocoding to get address
       const address = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
-      
       if (address.length > 0) {
         const currentAddress = `${address[0].name || ''} ${address[0].street || ''}, ${address[0].city || ''}`.trim();
         if (!pickupLocation) {
@@ -113,8 +110,8 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   };
 
   const updateQuantity = (itemId: string, change: number) => {
-    setLuggageItems(prev => prev.map(item => 
-      item.id === itemId 
+    setLuggageItems(prev => prev.map(item =>
+      item.id === itemId
         ? { ...item, quantity: Math.max(0, item.quantity + change) }
         : item
     ));
@@ -122,18 +119,15 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 
   const takeLuggagePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
     if (permissionResult.granted === false) {
       Alert.alert('Permission Required', 'Camera permission is required!');
       return;
     }
-
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets[0]) {
       setLuggagePhotos(prev => [...prev, result.assets[0].uri]);
     }
@@ -141,19 +135,16 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 
   const uploadFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
     if (permissionResult.granted === false) {
       Alert.alert('Permission Required', 'Gallery permission is required!');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets[0]) {
       setLuggagePhotos(prev => [...prev, result.assets[0].uri]);
     }
@@ -168,24 +159,18 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 
   const calculateDeliveryPrice = () => {
     if (!selectedService) return 0;
-    
     const totalItems = getTotalItems();
     const baseDeliveryFee = 20;
     const perItemFee = 5;
-    
     if (selectedService === 'self-service') {
-      // Self-service: only delivery charge if different location
       if (deliveryLocation && deliveryLocation !== pickupLocation) {
         return baseDeliveryFee + (perItemFee * totalItems);
       }
       return 0;
     }
-    
     if (selectedService === 'pickup') {
-      // Pickup service: pickup + delivery charges
       return (baseDeliveryFee * 2) + (perItemFee * totalItems);
     }
-    
     return 0;
   };
 
@@ -201,7 +186,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
     const storagePrice = calculateStoragePrice();
     const deliveryPrice = calculateDeliveryPrice();
     const hours = parseInt(storageHours) || 1;
-    
     return {
       storage: storagePrice,
       delivery: deliveryPrice,
@@ -214,32 +198,26 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   const handleConfirm = () => {
     const totalItems = getTotalItems();
     const selectedItems = getSelectedItems();
-    
     if (!selectedService) {
       Alert.alert('Error', 'Please select service type');
       return;
     }
-
     if (totalItems === 0) {
       Alert.alert('Error', 'Please select at least one luggage item');
       return;
     }
-
     if (!pickupLocation.trim()) {
       Alert.alert('Error', 'Please enter pickup location');
       return;
     }
-
     if (selectedService === 'pickup' && !deliveryLocation.trim()) {
       Alert.alert('Error', 'Please enter delivery location for pickup service');
       return;
     }
-
     if (luggagePhotos.length === 0) {
       Alert.alert('Error', 'Please upload at least one photo of your luggage for verification');
       return;
     }
-
     const breakdown = getPriceBreakdown();
     const details = {
       serviceType: selectedService,
@@ -252,7 +230,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
       breakdown,
       currentLocation,
     };
-
     onSelect(breakdown.total, details);
     onClose();
   };
@@ -341,7 +318,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
           {selectedService && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Locations</Text>
-              
               <Text style={styles.inputLabel}>Pickup Location *</Text>
               <View style={styles.locationInputContainer}>
                 <TextInput
@@ -355,7 +331,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
                   <Navigation size={16} color="#3B82F6" />
                 </TouchableOpacity>
               </View>
-              
               <Text style={styles.popularText}>Popular locations:</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.popularLocations}>
                 {popularLocations.map((location, index) => (
@@ -368,7 +343,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-
               {selectedService === 'pickup' && (
                 <>
                   <Text style={styles.inputLabel}>Delivery Location *</Text>
@@ -381,7 +355,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
                   />
                 </>
               )}
-
               {selectedService === 'self-service' && (
                 <>
                   <Text style={styles.inputLabel}>Delivery Location (Optional)</Text>
@@ -485,7 +458,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Luggage Photos *</Text>
               <Text style={styles.sectionSubtitle}>Upload photos for verification during pickup/delivery</Text>
-              
               <View style={styles.photoActions}>
                 <TouchableOpacity style={styles.photoButton} onPress={takeLuggagePhoto}>
                   <Camera size={20} color="#3B82F6" />
@@ -496,7 +468,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
                   <Text style={styles.photoButtonText}>Upload</Text>
                 </TouchableOpacity>
               </View>
-
               {luggagePhotos.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
                   {luggagePhotos.map((photo, index) => (
@@ -558,13 +529,13 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
           <TouchableOpacity
             style={[
               styles.confirmButton,
-              (!selectedService || totalItems === 0 || !pickupLocation || 
-               (selectedService === 'pickup' && !deliveryLocation) || luggagePhotos.length === 0) && 
+              (!selectedService || totalItems === 0 || !pickupLocation ||
+                (selectedService === 'pickup' && !deliveryLocation) || luggagePhotos.length === 0) &&
               styles.disabledButton,
             ]}
             onPress={handleConfirm}
             disabled={
-              !selectedService || totalItems === 0 || !pickupLocation || 
+              !selectedService || totalItems === 0 || !pickupLocation ||
               (selectedService === 'pickup' && !deliveryLocation) || luggagePhotos.length === 0
             }
           >
@@ -579,6 +550,7 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 }
 
 const styles = StyleSheet.create({
+  // ...styles unchanged, same as your current file...
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -933,7 +905,3 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
