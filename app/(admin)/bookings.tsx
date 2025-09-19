@@ -21,6 +21,22 @@ import {
   Star,
   X
 } from 'lucide-react-native';
+type Booking = {
+  id: string;
+  user: string;
+  porter: string;
+  status: 'pending' | 'in-transit' | 'completed';
+  pickupLocation: string;
+  deliveryLocation: string;
+  pickupTime: string;
+  deliveryTime: string;
+  amount: number;
+  luggageCount: number;
+  serviceType: 'pickup' | 'self-service';
+  rating: number | null;
+  luggage: { type: string; count: number }[];
+  notes: string;
+};
 
 export default function AdminBookingsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -489,4 +505,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  modalLabel:
+  modalLabel:{ fontWeight: '600',
+    color: '#6B7280',
+  },
+});

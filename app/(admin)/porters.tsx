@@ -14,13 +14,30 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Search, Filter, CircleCheck as CheckCircle, Circle as XCircle, Eye, Star, MapPin, Phone, Car, FileText, X, Package } from 'lucide-react-native';
 
+type Porter = {
+  id: string;
+  name: string;
+  phone: string;
+  city: string;
+  status: 'pending' | 'verified' | 'rejected';
+  rating: number;
+  totalDeliveries: number;
+  vehicleType: string;
+  vehicleNumber: string;
+  joinDate: string;
+  documents: {
+    idProof: string;
+    license: string;
+    vehicleReg: string;
+  };
+};
 export default function AdminPortersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedPorter, setSelectedPorter] = useState(null);
+  const [selectedPorter, setSelectedPorter] = useState<Porter | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const porters = [
+  const porters:Porter[] = [
     {
       id: 'P001',
       name: 'Rajesh Kumar',

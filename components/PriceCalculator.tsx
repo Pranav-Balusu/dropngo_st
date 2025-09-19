@@ -550,7 +550,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 }
 
 const styles = StyleSheet.create({
-  // ...styles unchanged, same as your current file...
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -905,3 +904,7 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
