@@ -12,11 +12,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Package, MapPin, Clock, Phone, Navigation, QrCode, CircleCheck as CheckCircle, User, IndianRupee, Camera, Car, FileText } from 'lucide-react-native';
 import LuggagePhotoVerification from '@/components/LuggagePhotoVerification';
 
+
 export default function PorterBookingsScreen() {
   const [selectedTab, setSelectedTab] = useState('active');
   const [verificationModalVisible, setVerificationModalVisible] = useState(false);
   const [selectedBookingForVerification, setSelectedBookingForVerification] = useState(null);
-
+  const [luggagePhotos, setLuggagePhotos] = useState<string[]>([]);
+  const [selectedPorter, setSelectedPorter] = useState<Porter | null>(null);
   const bookings = {
     active: [
       {

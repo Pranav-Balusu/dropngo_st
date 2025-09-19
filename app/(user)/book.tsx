@@ -32,7 +32,7 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 
-// Define the PricingConfig type
+// Pricing config type
 type PricingConfig = {
   'self-service': {
     small: number;
@@ -50,7 +50,7 @@ type PricingConfig = {
   perKmFee: number;
 };
 
-// Define a type for the luggage state
+// Luggage state type
 type LuggageState = {
   small: number;
   medium: number;
@@ -58,7 +58,7 @@ type LuggageState = {
   'extra-large': number;
 };
 
-// Define the LocationType for map coordinates
+// Map region type
 type LocationType = {
   latitude: number;
   longitude: number;
