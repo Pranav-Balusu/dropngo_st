@@ -6,8 +6,8 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -18,74 +18,56 @@ import {
   Star,
   ArrowRight,
   Camera,
-  Lock,
-  Wifi,
   Eye,
-  Navigation,
   Package,
   LogOut
 } from 'lucide-react-native';
-import PriceCalculator from '@/components/PriceCalculator';
 import { supabase } from '@/lib/supabase';
+import { User } from '@/lib/supabase'; // Import the User type
 
 export default function UserHomeScreen() {
-  const [calculatorVisible, setCalculatorVisible] = useState(false);
-  const [userLocation, setUserLocation] = useState('Varanasi Railway Station');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const recentBookings = [
-    {
-      id: 'DN001',
-      status: 'delivered',
-      location: 'Railway Station → Airport',
-      date: '2025-01-15',
-      price: '₹180',
-    },
-    {
-      id: 'DN002',
-      status: 'in-storage',
-      location: 'Dashashwamedh Ghat Hub',
-      date: '2025-01-14',
-      price: '₹120',
-    },
-  ];
+  // --- ADDED: useEffect to fetch the logged-in user's data ---
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Fetch full profile from your 'users' table
+          const { data: userProfile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-  const handlePriceSelection = (total: number, details: any) => {
-    const bookingId = `DN${Date.now().toString().slice(-6)}`;
-    Alert.alert(
-      'Booking Confirmed',
-      `Total: ₹${total.toFixed(2)}\nBooking ID: ${bookingId}\nItems: ${details.totalItems}\nService: ${details.serviceType}`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Track Booking', onPress: () => router.push('/(user)/track') }
-      ]
-    );
-  };
+          if (error) throw error;
+          setCurrentUser(userProfile);
+        }
+      } catch (e) {
+        console.error('Error fetching user data:', e);
+        Alert.alert('Error', 'Failed to fetch user data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          onPress: async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) {
-                Alert.alert('Error', error.message);
-              } else {
-                router.push('/(auth)/login');
-              }
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'An unexpected error occurred during logout.');
-            }
-          }
-        }
-      ]
-    );
+    await supabase.auth.signOut();
+    // The root layout will handle the redirect automatically
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,8 +77,8 @@ export default function UserHomeScreen() {
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            <Text style={styles.greeting}>Welcome to DropNGo!</Text>
-            <Text style={styles.location}>📍 {userLocation}</Text>
+            <Text style={styles.greeting}>Welcome, {currentUser?.full_name || 'Guest'}!</Text>
+            <Text style={styles.location}>📍 {currentUser?.city || 'Vijayawada'}</Text>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <LogOut size={24} color="#FFFFFF" />
             </TouchableOpacity>
@@ -104,12 +86,12 @@ export default function UserHomeScreen() {
             <View style={styles.statsContainer}>
               <View style={styles.statCard}>
                 <Package size={24} color="#FFFFFF" />
-                <Text style={styles.statNumber}>12</Text>
+                <Text style={styles.statNumber}>{currentUser?.total_bookings || 0}</Text>
                 <Text style={styles.statLabel}>Total Bookings</Text>
               </View>
               <View style={styles.statCard}>
                 <Star size={24} color="#FFFFFF" />
-                <Text style={styles.statNumber}>4.8</Text>
+                <Text style={styles.statNumber}>{currentUser?.rating || 'N/A'}</Text>
                 <Text style={styles.statLabel}>Rating</Text>
               </View>
               <View style={styles.statCard}>
@@ -165,35 +147,9 @@ export default function UserHomeScreen() {
               </View>
             </View>
           </View>
+          
+          {/* Add recent bookings section here if desired */}
 
-          {recentBookings.length > 0 && (
-            <View style={styles.recentSection}>
-              <Text style={styles.sectionTitle}>Recent Bookings</Text>
-              {recentBookings.map((booking) => (
-                <TouchableOpacity key={booking.id} style={styles.bookingCard}>
-                  <View style={styles.bookingHeader}>
-                    <Text style={styles.bookingId}>#{booking.id}</Text>
-                    <View style={[
-                      styles.statusBadge,
-                      booking.status === 'delivered' ? styles.statusDelivered : styles.statusActive
-                    ]}>
-                      <Text style={[
-                        styles.statusText,
-                        booking.status === 'delivered' ? styles.statusTextDelivered : styles.statusTextActive
-                      ]}>
-                        {booking.status === 'delivered' ? 'Delivered' : 'In Storage'}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.bookingLocation}>{booking.location}</Text>
-                  <View style={styles.bookingFooter}>
-                    <Text style={styles.bookingDate}>{booking.date}</Text>
-                    <Text style={styles.bookingPrice}>{booking.price}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -204,6 +160,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     paddingTop: 60,
@@ -305,70 +265,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     fontWeight: '600',
-  },
-  recentSection: {
-    marginBottom: 32,
-  },
-  bookingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  bookingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  bookingId: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusDelivered: {
-    backgroundColor: '#DCFCE7',
-  },
-  statusActive: {
-    backgroundColor: '#FEF3C7',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statusTextDelivered: {
-    color: '#059669',
-  },
-  statusTextActive: {
-    color: '#D97706',
-  },
-  bookingLocation: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  bookingFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bookingDate: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  bookingPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#059669',
   },
 });

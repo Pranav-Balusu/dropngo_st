@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Package, Clock, CircleCheck as CheckCircle, Truck, QrCode, Phone, MessageCircle, Navigation, Star } from 'lucide-react-native';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
-import LiveTrackingMap from '@/components/LiveTrackingMap';
+import LiveTrackingMap from '@/components/LiveTrackingMap.native';
 
 export default function TrackingScreen() {
   const [qrModalVisible, setQrModalVisible] = useState(false);
