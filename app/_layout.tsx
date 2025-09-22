@@ -43,7 +43,7 @@ export default function RootLayout() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        const currentGroup = segments[0];
+        const currentGroup = `(${segments[0] || ''})`;
         const inAuthGroup = currentGroup === '(auth)';
 
         if (session) {
