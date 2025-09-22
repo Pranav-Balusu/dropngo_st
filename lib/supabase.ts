@@ -1,16 +1,40 @@
+import 'react-native-url-polyfill/auto'; // Required for Supabase to work in React Native
 import { createClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+
+// Custom secure storage adapter for Expo
+const ExpoSecureStoreAdapter = {
+  getItem: (key: string) => {
+    return SecureStore.getItemAsync(key);
+  },
+  setItem: (key: string, value: string) => {
+    SecureStore.setItemAsync(key, value);
+  },
+  removeItem: (key: string) => {
+    SecureStore.deleteItemAsync(key);
+  },
+};
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: ExpoSecureStoreAdapter as any,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
 
-// Database types
+// --- DATABASE TYPES ---
+// These types are now consistent with your final database schema.
+
 export interface User {
   id: string;
   email: string;
-  phone: string;
-  name: string;
+  phone?: string;
+  full_name: string; // Changed from 'name'
   user_type: 'customer' | 'porter' | 'admin';
   address?: string;
   city?: string;
@@ -40,7 +64,7 @@ export interface Booking {
   booking_number: string;
   user_id: string;
   porter_id?: string;
-  service_type: 'self-service' | 'pickup';
+  service_type: 'pickup'; // Removed 'self-service'
   pickup_location: string;
   delivery_location: string;
   storage_hours: number;
@@ -80,153 +104,10 @@ export interface LuggagePhoto {
 
 export interface Pricing {
   id: string;
-  service_type: 'self-service' | 'pickup';
+  service_type: 'pickup'; // Removed 'self-service'
   luggage_size: 'small' | 'medium' | 'large' | 'extra-large';
   price_per_hour: number;
   base_pickup_fee: number;
   per_km_fee: number;
   updated_at: string;
 }
-
-// Auth functions
-export const signUp = async (email: string, password: string, userData: Partial<User>) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-
-  if (data.user) {
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert([
-        {
-          id: data.user.id,
-          email,
-          ...userData,
-        },
-      ]);
-
-    if (profileError) throw profileError;
-  }
-
-  return data;
-};
-
-export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-  return data;
-};
-
-export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-};
-
-// Booking functions
-export const createBooking = async (bookingData: Partial<Booking>, luggageItems: Partial<LuggageItem>[], photos: string[]) => {
-  const { data: booking, error: bookingError } = await supabase
-    .from('bookings')
-    .insert([bookingData])
-    .select()
-    .single();
-
-  if (bookingError) throw bookingError;
-
-  // Insert luggage items
-  const luggageItemsWithBookingId = luggageItems.map(item => ({
-    ...item,
-    booking_id: booking.id,
-  }));
-
-  const { error: itemsError } = await supabase
-    .from('luggage_items')
-    .insert(luggageItemsWithBookingId);
-
-  if (itemsError) throw itemsError;
-
-  // Insert photos
-  const photosWithBookingId = photos.map(photo => ({
-    booking_id: booking.id,
-    photo_url: photo,
-    photo_type: 'original',
-    uploaded_by: bookingData.user_id,
-  }));
-
-  const { error: photosError } = await supabase
-    .from('luggage_photos')
-    .insert(photosWithBookingId);
-
-  if (photosError) throw photosError;
-
-  return booking;
-};
-
-// Pricing functions
-export const getPricing = async () => {
-  const { data, error } = await supabase
-    .from('pricing')
-    .select('*');
-
-  if (error) throw error;
-  return data;
-};
-
-export const updatePricing = async (pricingData: Partial<Pricing>[]) => {
-  const { data, error } = await supabase
-    .from('pricing')
-    .upsert(pricingData, { onConflict: 'service_type,luggage_size' });
-
-  if (error) throw error;
-  return data;
-};
-
-// Porter functions
-export const createPorterProfile = async (porterData: Partial<PorterProfile>, documents: { type: string; url: string }[]) => {
-  const { data: porter, error: porterError } = await supabase
-    .from('porter_profiles')
-    .insert([porterData])
-    .select()
-    .single();
-
-  if (porterError) throw porterError;
-
-  // Insert documents
-  const documentsWithPorterId = documents.map(doc => ({
-    porter_id: porter.id,
-    document_type: doc.type,
-    document_url: doc.url,
-  }));
-
-  const { error: docsError } = await supabase
-    .from('porter_documents')
-    .insert(documentsWithPorterId);
-
-  if (docsError) throw docsError;
-
-  return porter;
-};
-
-// File upload function
-export const uploadFile = async (file: any, bucket: string, path: string) => {
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file);
-
-  if (error) throw error;
-  return data;
-};
-
-export const getPublicUrl = (bucket: string, path: string) => {
-  const { data } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(path);
-
-  return data.publicUrl;
-};
