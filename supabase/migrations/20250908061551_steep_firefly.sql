@@ -21,8 +21,8 @@
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email text UNIQUE NOT NULL,
-  phone text UNIQUE NOT NULL,
-  name text NOT NULL,
+  phone text UNIQUE, -- Made phone optional as porters might have it but not all users
+  full_name text NOT NULL, -- Changed from 'name' to 'full_name' for consistency
   user_type text NOT NULL CHECK (user_type IN ('customer', 'porter', 'admin')),
   address text,
   city text,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS locations (
 -- Pricing configuration
 CREATE TABLE IF NOT EXISTS pricing (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  service_type text NOT NULL CHECK (service_type IN ('self-service', 'pickup')),
+  service_type text NOT NULL CHECK (service_type IN ('pickup')), -- Removed 'self-service'
   luggage_size text NOT NULL CHECK (luggage_size IN ('small', 'medium', 'large', 'extra-large')),
   price_per_hour numeric(6,2) NOT NULL,
   base_pickup_fee numeric(6,2) DEFAULT 20.00,
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   booking_number text UNIQUE NOT NULL,
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,
   porter_id uuid REFERENCES porter_profiles(id),
-  service_type text NOT NULL CHECK (service_type IN ('self-service', 'pickup')),
+  service_type text NOT NULL CHECK (service_type IN ('pickup')), -- Removed 'self-service'
   pickup_location text NOT NULL,
   delivery_location text NOT NULL,
   storage_hours integer NOT NULL DEFAULT 1,
@@ -207,12 +207,8 @@ CREATE POLICY "Users can upload photos for their bookings" ON luggage_photos
   FOR INSERT TO authenticated
   WITH CHECK (uploaded_by = auth.uid());
 
--- Insert default pricing
+-- Insert default pricing (Removed 'self-service' entries)
 INSERT INTO pricing (service_type, luggage_size, price_per_hour) VALUES
-  ('self-service', 'small', 3.5),
-  ('self-service', 'medium', 4.5),
-  ('self-service', 'large', 7.0),
-  ('self-service', 'extra-large', 9.0),
   ('pickup', 'small', 3.0),
   ('pickup', 'medium', 5.0),
   ('pickup', 'large', 7.0),
