@@ -34,7 +34,7 @@ export default function BookingScreen() {
   const [luggage, setLuggage] = useState<LuggageState>({ small: 0, medium: 0, large: 0, 'extra-large': 0 });
   const [duration, setDuration] = useState(1);
   const [pricing, setPricing] = useState<PricingConfig | null>(null);
-  const [loading, setLoading] = useState(true); // --- CORRECTED: Start in loading state
+  const [loading, setLoading] = useState(true);
   const [insurance, setInsurance] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 19.076, lng: 72.8777 });
@@ -43,7 +43,6 @@ export default function BookingScreen() {
   const [luggagePhotos, setLuggagePhotos] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
 
-  // --- ADDED useEffect to load data on screen mount ---
   useEffect(() => {
     getCurrentUser();
     loadPricing();
@@ -68,11 +67,24 @@ export default function BookingScreen() {
   };
 
   const { isLoaded } = useJsApiLoader({
-    // ===================================================================
-    // IMPORTANT: REPLACE WITH YOUR ACTUAL GOOGLE MAPS API KEY
-    // ===================================================================
-    googleMapsApiKey: 'YOUR_GOOGLE_MAPS_API_KEY',
+    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '',
   });
+
+  // --- NEW Function to get address from coordinates using Geocoding API ---
+  const getAddressFromLatLng = async (lat: number, lng: number) => {
+    try {
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`);
+      const data = await response.json();
+      if (data.status === 'OK' && data.results[0]) {
+        return data.results[0].formatted_address;
+      }
+      return `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      return `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+    }
+  };
 
   const calculateTotal = (currentPricing: PricingConfig | null) => {
     if (!currentPricing) return 0;
@@ -93,8 +105,9 @@ export default function BookingScreen() {
     setMapModalVisible(true);
   };
 
+  // --- UPDATED to use the new getAddressFromLatLng function ---
   const handleMapConfirm = async () => {
-    const address = `Lat: ${markerPosition.lat.toFixed(5)}, Lng: ${markerPosition.lng.toFixed(5)}`;
+    const address = await getAddressFromLatLng(markerPosition.lat, markerPosition.lng);
     if (locationType === 'pickup') {
       setPickupLocation(address);
       setPickupCoords(markerPosition);
