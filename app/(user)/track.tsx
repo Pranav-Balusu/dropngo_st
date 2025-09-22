@@ -173,7 +173,6 @@ export default function TrackingScreen() {
                 <Text style={styles.porterName}>{currentBooking.porterName}</Text>
                 <Text style={styles.porterPhone}>{currentBooking.porterPhone}</Text>
                 <View style={styles.porterRating}>
-                  <Star size={12} color="#F59E0B" />
                   <Text style={styles.ratingText}>★ {currentBooking.porterRating}</Text>
                   <Text style={styles.ratingCount}>(124 reviews)</Text>
                 </View>
@@ -235,7 +234,7 @@ export default function TrackingScreen() {
     </SafeAreaView>
   );
 }
-
+// Add your StyleSheet here...
 const styles = StyleSheet.create({
   container: {
     flex: 1,

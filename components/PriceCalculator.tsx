@@ -29,7 +29,8 @@ interface PriceCalculatorProps {
 }
 
 export default function PriceCalculator({ visible, onClose, onSelect }: PriceCalculatorProps) {
-  const [selectedService, setSelectedService] = useState<'self-service' | 'pickup' | null>(null);
+  // Service is now 'pickup' by default.
+  const [selectedService, setSelectedService] = useState<'pickup'>('pickup');
   const [pickupLocation, setPickupLocation] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [storageHours, setStorageHours] = useState('1');
@@ -38,12 +39,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   const [currentLocation, setCurrentLocation] = useState<any>(null);
 
   const pricing = {
-    'self-service': {
-      small: 3.5,
-      medium: 4.5,
-      large: 7.0,
-      'extra-large': 9.0,
-    },
     pickup: {
       small: 3.0,
       medium: 5.0,
@@ -72,17 +67,16 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 
   useEffect(() => {
     getCurrentLocation();
-    if (selectedService) {
-      const items = bagSizes.map(size => ({
-        id: size.id,
-        name: size.name,
-        description: size.description,
-        price: pricing[selectedService][size.id as keyof typeof pricing['self-service']],
-        quantity: 0,
-      }));
-      setLuggageItems(items);
-    }
-  }, [selectedService]);
+    // Initialize luggage items based on the default 'pickup' service
+    const items = bagSizes.map(size => ({
+      id: size.id,
+      name: size.name,
+      description: size.description,
+      price: pricing.pickup[size.id as keyof typeof pricing['pickup']],
+      quantity: 0,
+    }));
+    setLuggageItems(items);
+  }, [visible]); // Reruns when the modal becomes visible
 
   const getCurrentLocation = async () => {
     try {
@@ -158,20 +152,10 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   };
 
   const calculateDeliveryPrice = () => {
-    if (!selectedService) return 0;
     const totalItems = getTotalItems();
     const baseDeliveryFee = 20;
     const perItemFee = 5;
-    if (selectedService === 'self-service') {
-      if (deliveryLocation && deliveryLocation !== pickupLocation) {
-        return baseDeliveryFee + (perItemFee * totalItems);
-      }
-      return 0;
-    }
-    if (selectedService === 'pickup') {
-      return (baseDeliveryFee * 2) + (perItemFee * totalItems);
-    }
-    return 0;
+    return (baseDeliveryFee * 2) + (perItemFee * totalItems);
   };
 
   const getTotalItems = () => {
@@ -198,10 +182,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   const handleConfirm = () => {
     const totalItems = getTotalItems();
     const selectedItems = getSelectedItems();
-    if (!selectedService) {
-      Alert.alert('Error', 'Please select service type');
-      return;
-    }
     if (totalItems === 0) {
       Alert.alert('Error', 'Please select at least one luggage item');
       return;
@@ -210,8 +190,8 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
       Alert.alert('Error', 'Please enter pickup location');
       return;
     }
-    if (selectedService === 'pickup' && !deliveryLocation.trim()) {
-      Alert.alert('Error', 'Please enter delivery location for pickup service');
+    if (!deliveryLocation.trim()) {
+      Alert.alert('Error', 'Please enter delivery location');
       return;
     }
     if (luggagePhotos.length === 0) {
@@ -222,7 +202,7 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
     const details = {
       serviceType: selectedService,
       pickupLocation,
-      deliveryLocation: selectedService === 'pickup' ? deliveryLocation : (deliveryLocation || pickupLocation),
+      deliveryLocation,
       storageHours: parseInt(storageHours),
       luggageItems: selectedItems,
       luggagePhotos,
@@ -235,7 +215,6 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   };
 
   const reset = () => {
-    setSelectedService(null);
     setPickupLocation('');
     setDeliveryLocation('');
     setStorageHours('1');
@@ -264,197 +243,144 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Service Type Selection */}
+          {/* Service Type Section (Now static) */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Service Type</Text>
+            <Text style={styles.sectionTitle}>Service Type</Text>
             <View style={styles.optionsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.serviceOption,
-                  selectedService === 'self-service' && styles.selectedOption,
-                ]}
-                onPress={() => setSelectedService('self-service')}
-              >
-                <Package size={24} color={selectedService === 'self-service' ? '#3B82F6' : '#666'} />
+              <View style={[styles.serviceOption, styles.selectedOption]}>
+                <MapPin size={24} color={'#3B82F6'} />
                 <View style={styles.optionContent}>
-                  <Text style={[
-                    styles.optionTitle,
-                    selectedService === 'self-service' && styles.selectedOptionText,
-                  ]}>
-                    Self Service
-                  </Text>
-                  <Text style={styles.optionDescription}>
-                    Drop off and pick up yourself
-                  </Text>
-                  <Text style={styles.optionPrice}>From ₹35/hour</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.serviceOption,
-                  selectedService === 'pickup' && styles.selectedOption,
-                ]}
-                onPress={() => setSelectedService('pickup')}
-              >
-                <MapPin size={24} color={selectedService === 'pickup' ? '#3B82F6' : '#666'} />
-                <View style={styles.optionContent}>
-                  <Text style={[
-                    styles.optionTitle,
-                    selectedService === 'pickup' && styles.selectedOptionText,
-                  ]}>
+                  <Text style={[styles.optionTitle, styles.selectedOptionText]}>
                     Pickup & Delivery
                   </Text>
                   <Text style={styles.optionDescription}>
                     We pick up and deliver for you
                   </Text>
-                  <Text style={styles.optionPrice}>From ₹30/hour + delivery</Text>
                 </View>
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
 
           {/* Location Selection */}
-          {selectedService && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Locations</Text>
-              <Text style={styles.inputLabel}>Pickup Location *</Text>
-              <View style={styles.locationInputContainer}>
-                <TextInput
-                  style={styles.locationInput}
-                  placeholder="Enter pickup location"
-                  value={pickupLocation}
-                  onChangeText={setPickupLocation}
-                  placeholderTextColor="#9CA3AF"
-                />
-                <TouchableOpacity onPress={getCurrentLocation} style={styles.locationButton}>
-                  <Navigation size={16} color="#3B82F6" />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Locations</Text>
+            <Text style={styles.inputLabel}>Pickup Location *</Text>
+            <View style={styles.locationInputContainer}>
+              <TextInput
+                style={styles.locationInput}
+                placeholder="Enter pickup location"
+                value={pickupLocation}
+                onChangeText={setPickupLocation}
+                placeholderTextColor="#9CA3AF"
+              />
+              <TouchableOpacity onPress={getCurrentLocation} style={styles.locationButton}>
+                <Navigation size={16} color="#3B82F6" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.popularText}>Popular locations:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.popularLocations}>
+              {popularLocations.map((location, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.popularLocationChip}
+                  onPress={() => setPickupLocation(location)}
+                >
+                  <Text style={styles.popularLocationText}>{location}</Text>
                 </TouchableOpacity>
-              </View>
-              <Text style={styles.popularText}>Popular locations:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.popularLocations}>
-                {popularLocations.map((location, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.popularLocationChip}
-                    onPress={() => setPickupLocation(location)}
-                  >
-                    <Text style={styles.popularLocationText}>{location}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              {selectedService === 'pickup' && (
-                <>
-                  <Text style={styles.inputLabel}>Delivery Location *</Text>
-                  <TextInput
-                    style={styles.locationInput}
-                    placeholder="Enter delivery location"
-                    value={deliveryLocation}
-                    onChangeText={setDeliveryLocation}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </>
-              )}
-              {selectedService === 'self-service' && (
-                <>
-                  <Text style={styles.inputLabel}>Delivery Location (Optional)</Text>
-                  <TextInput
-                    style={styles.locationInput}
-                    placeholder="Same as pickup location (no extra charge)"
-                    value={deliveryLocation}
-                    onChangeText={setDeliveryLocation}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <Text style={styles.helperText}>
-                    Leave empty to return to pickup location (no delivery charge)
-                  </Text>
-                </>
-              )}
-            </View>
-          )}
+              ))}
+            </ScrollView>
+            
+            <Text style={styles.inputLabel}>Delivery Location *</Text>
+            <TextInput
+              style={styles.locationInputSingle}
+              placeholder="Enter delivery location"
+              value={deliveryLocation}
+              onChangeText={setDeliveryLocation}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
 
-          {/* Storage Duration */}
-          {selectedService && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Storage Duration</Text>
-              <View style={styles.durationContainer}>
-                <Clock size={20} color="#666" />
-                <TextInput
-                  style={styles.durationInput}
-                  placeholder="Hours"
-                  value={storageHours}
-                  onChangeText={setStorageHours}
-                  keyboardType="numeric"
-                  placeholderTextColor="#9CA3AF"
-                />
-                <Text style={styles.durationText}>hours</Text>
-              </View>
-              <Text style={styles.helperText}>
-                Minimum 1 hour, maximum 168 hours (7 days)
-              </Text>
+          {/* Storage Duration, Luggage Selection, Photos, and Price Breakdown sections remain the same */}
+          {/* ... (pasting the rest of the component for completeness) ... */}
+
+           {/* Storage Duration */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Storage Duration</Text>
+            <View style={styles.durationContainer}>
+              <Clock size={20} color="#666" />
+              <TextInput
+                style={styles.durationInput}
+                placeholder="Hours"
+                value={storageHours}
+                onChangeText={setStorageHours}
+                keyboardType="numeric"
+                placeholderTextColor="#9CA3AF"
+              />
+              <Text style={styles.durationText}>hours</Text>
             </View>
-          )}
+            <Text style={styles.helperText}>
+              Minimum 1 hour, maximum 168 hours (7 days)
+            </Text>
+          </View>
 
           {/* Multiple Luggage Selection */}
-          {selectedService && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Select Your Luggage</Text>
-              <Text style={styles.sectionSubtitle}>Choose quantity for each type (Multiple selections allowed)</Text>
-              <View style={styles.luggageContainer}>
-                {luggageItems.map((item) => (
-                  <View key={item.id} style={[
-                    styles.luggageItem,
-                    item.quantity > 0 && styles.luggageItemSelected
-                  ]}>
-                    <View style={styles.luggageInfo}>
-                      <View style={styles.luggageHeader}>
-                        <Text style={styles.luggageIcon}>
-                          {bagSizes.find(bag => bag.id === item.id)?.icon}
-                        </Text>
-                        <View style={styles.luggageDetails}>
-                          <Text style={styles.luggageName}>{item.name}</Text>
-                          <Text style={styles.luggageDescription}>{item.description}</Text>
-                          <Text style={styles.luggagePrice}>₹{item.price}/hour</Text>
-                        </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Select Your Luggage</Text>
+            <Text style={styles.sectionSubtitle}>Choose quantity for each type (Multiple selections allowed)</Text>
+            <View style={styles.luggageContainer}>
+              {luggageItems.map((item) => (
+                <View key={item.id} style={[
+                  styles.luggageItem,
+                  item.quantity > 0 && styles.luggageItemSelected
+                ]}>
+                  <View style={styles.luggageInfo}>
+                    <View style={styles.luggageHeader}>
+                      <Text style={styles.luggageIcon}>
+                        {bagSizes.find(bag => bag.id === item.id)?.icon}
+                      </Text>
+                      <View style={styles.luggageDetails}>
+                        <Text style={styles.luggageName}>{item.name}</Text>
+                        <Text style={styles.luggageDescription}>{item.description}</Text>
+                        <Text style={styles.luggagePrice}>₹{item.price}/hour</Text>
                       </View>
-                      {item.quantity > 0 && (
-                        <Text style={styles.itemTotal}>
-                          Subtotal: ₹{(item.price * item.quantity * parseInt(storageHours || '1')).toFixed(0)}
-                        </Text>
-                      )}
                     </View>
-                    <View style={styles.quantityControls}>
-                      <TouchableOpacity
-                        style={[styles.quantityButton, item.quantity === 0 && styles.quantityButtonDisabled]}
-                        onPress={() => updateQuantity(item.id, -1)}
-                        disabled={item.quantity === 0}
-                      >
-                        <Minus size={16} color={item.quantity === 0 ? '#ccc' : '#3B82F6'} />
-                      </TouchableOpacity>
-                      <Text style={styles.quantityText}>{item.quantity}</Text>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => updateQuantity(item.id, 1)}
-                      >
-                        <Plus size={16} color="#3B82F6" />
-                      </TouchableOpacity>
-                    </View>
+                    {item.quantity > 0 && (
+                      <Text style={styles.itemTotal}>
+                        Subtotal: ₹{(item.price * item.quantity * parseInt(storageHours || '1')).toFixed(0)}
+                      </Text>
+                    )}
                   </View>
-                ))}
-              </View>
-              {totalItems > 0 && (
-                <View style={styles.selectionSummary}>
-                  <Text style={styles.totalItemsText}>Total Items Selected: {totalItems}</Text>
-                  <Text style={styles.selectedItemsList}>
-                    {selectedItems.map(item => `${item.quantity}x ${item.name}`).join(', ')}
-                  </Text>
+                  <View style={styles.quantityControls}>
+                    <TouchableOpacity
+                      style={[styles.quantityButton, item.quantity === 0 && styles.quantityButtonDisabled]}
+                      onPress={() => updateQuantity(item.id, -1)}
+                      disabled={item.quantity === 0}
+                    >
+                      <Minus size={16} color={item.quantity === 0 ? '#ccc' : '#3B82F6'} />
+                    </TouchableOpacity>
+                    <Text style={styles.quantityText}>{item.quantity}</Text>
+                    <TouchableOpacity
+                      style={styles.quantityButton}
+                      onPress={() => updateQuantity(item.id, 1)}
+                    >
+                      <Plus size={16} color="#3B82F6" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              )}
+              ))}
             </View>
-          )}
+            {totalItems > 0 && (
+              <View style={styles.selectionSummary}>
+                <Text style={styles.totalItemsText}>Total Items Selected: {totalItems}</Text>
+                <Text style={styles.selectedItemsList}>
+                  {selectedItems.map(item => `${item.quantity}x ${item.name}`).join(', ')}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Luggage Photos */}
-          {selectedService && totalItems > 0 && (
+          {totalItems > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Luggage Photos *</Text>
               <Text style={styles.sectionSubtitle}>Upload photos for verification during pickup/delivery</Text>
@@ -509,7 +435,7 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
                     <Text style={styles.breakdownHeader}>Service Charges:</Text>
                     <View style={styles.breakdownRow}>
                       <Text style={styles.breakdownLabel}>
-                        {selectedService === 'pickup' ? 'Pickup & Delivery:' : 'Delivery Fee:'}
+                        Pickup & Delivery:
                       </Text>
                       <Text style={styles.breakdownValue}>₹{breakdown.delivery.toFixed(0)}</Text>
                     </View>
@@ -522,6 +448,7 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
               </View>
             </View>
           )}
+
         </ScrollView>
 
         {/* Confirm Button */}
@@ -529,14 +456,12 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
           <TouchableOpacity
             style={[
               styles.confirmButton,
-              (!selectedService || totalItems === 0 || !pickupLocation ||
-                (selectedService === 'pickup' && !deliveryLocation) || luggagePhotos.length === 0) &&
+              (totalItems === 0 || !pickupLocation || !deliveryLocation || luggagePhotos.length === 0) &&
               styles.disabledButton,
             ]}
             onPress={handleConfirm}
             disabled={
-              !selectedService || totalItems === 0 || !pickupLocation ||
-              (selectedService === 'pickup' && !deliveryLocation) || luggagePhotos.length === 0
+              totalItems === 0 || !pickupLocation || !deliveryLocation || luggagePhotos.length === 0
             }
           >
             <Text style={styles.confirmButtonText}>
@@ -549,6 +474,7 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
   );
 }
 
+// --- STYLES ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -642,11 +568,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 8,
   },
-  locationInput: {
+   locationInput: {
     flex: 1,
     padding: 12,
     fontSize: 16,
     color: '#333',
+  },
+  locationInputSingle: {
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginBottom: 8,
   },
   locationButton: {
     padding: 12,
