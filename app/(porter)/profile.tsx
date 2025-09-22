@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { User, Mail, Phone, MapPin, Car, FileText, CreditCard as Edit, Bell, Shield, Star, Package, Clock, LogOut, Save } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase'; // Import the Supabase client
+// --- UPDATED: Changed 'CreditCard as Edit' to 'Pencil' for clarity ---
+import { User, Mail, Phone, MapPin, Car, FileText, Bell, Shield, Star, Package, Clock, LogOut, Save, Pencil } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 
 export default function PorterProfileScreen() {
   const [editing, setEditing] = useState(false);
@@ -45,7 +46,7 @@ export default function PorterProfileScreen() {
     Alert.alert('Success', 'Profile updated successfully!');
   };
 
-  const handleLogout = async () => { // Make the function async
+  const handleLogout = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -53,7 +54,7 @@ export default function PorterProfileScreen() {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Logout', 
-          onPress: async () => { // Use async here to await the sign-out call
+          onPress: async () => {
             try {
               const { error } = await supabase.auth.signOut();
               if (error) {
@@ -138,7 +139,8 @@ export default function PorterProfileScreen() {
               style={styles.editButton}
               onPress={() => setEditing(!editing)}
             >
-              <Edit size={16} color="#059669" />
+              {/* --- UPDATED: Using Pencil icon instead of the aliased Edit icon --- */}
+              <Pencil size={16} color="#059669" />
               <Text style={styles.editButtonText}>
                 {editing ? 'Cancel' : 'Edit'}
               </Text>
