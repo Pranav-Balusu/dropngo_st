@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { User, Mail, Phone, MapPin, CreditCard as Edit, Bell, Shield, CreditCard, LogOut, Star, Package, Clock, Settings } from 'lucide-react-native';
+// Corrected icon imports for clarity
+import { User, Mail, Phone, MapPin, Pencil, Bell, Shield, CreditCard, LogOut, Star, Package, Clock, Settings } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 
 export default function UserProfileScreen() {
@@ -115,7 +116,8 @@ export default function UserProfileScreen() {
               style={styles.editButton}
               onPress={() => setEditing(!editing)}
             >
-              <Edit size={16} color="#3B82F6" />
+              {/* Changed icon to Pencil for clarity */}
+              <Pencil size={16} color="#3B82F6" /> 
               <Text style={styles.editButtonText}>
                 {editing ? 'Cancel' : 'Edit'}
               </Text>
@@ -216,6 +218,7 @@ export default function UserProfileScreen() {
   );
 }
 
+// Add the full StyleSheet here...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
