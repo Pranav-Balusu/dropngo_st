@@ -9,7 +9,8 @@ import {
   Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Package, IndianRupee, Clock, Star, TrendingUp, MapPin, Bell, Navigation, CircleCheck as CheckCircle } from 'lucide-react-native';
+// --- UPDATED: Added QrCode icon to the import list ---
+import { Package, IndianRupee, Clock, Star, TrendingUp, MapPin, Bell, Navigation, QrCode } from 'lucide-react-native';
 
 export default function PorterDashboardScreen() {
   const [isOnline, setIsOnline] = useState(true);
@@ -47,7 +48,8 @@ export default function PorterDashboardScreen() {
 
   const quickActions = [
     { title: 'Start Pickup', icon: Package, color: '#3B82F6' },
-    { title: 'Scan QR', icon: Package, color: '#F97316' },
+    // --- UPDATED: Changed icon from Package to QrCode for clarity ---
+    { title: 'Scan QR', icon: QrCode, color: '#F97316' },
     { title: 'Navigation', icon: Navigation, color: '#059669' },
     { title: 'Report Issue', icon: Bell, color: '#DC2626' },
   ];
@@ -298,7 +300,8 @@ const styles = StyleSheet.create({
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
+    rowGap: 12,
   },
   actionCard: {
     width: '48%',
@@ -425,6 +428,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   performanceCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
@@ -435,14 +440,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   performanceItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
+    gap: 8,
   },
   performanceLabel: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
   },
   performanceValue: {
