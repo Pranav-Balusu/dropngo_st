@@ -28,26 +28,13 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
+      // The only job of this function is to sign in.
+      // The root layout will handle the navigation automatically.
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         Alert.alert('Login Failed', error.message);
-      } else {
-        // Fetch user profile to determine role
-        const { data: userProfile, error: userError } = await supabase
-          .from('users')
-          .select('user_type')
-          .eq('email', email)
-          .single();
-        if (userError) {
-          Alert.alert('Login Failed', 'Could not fetch user profile.');
-        } else if (userProfile?.user_type === 'admin') {
-          router.replace('/(admin)');
-        } else if (userProfile?.user_type === 'porter') {
-          router.replace('/(porter)');
-        } else {
-          router.replace('/(user)');
-        }
       }
+      // No need for router.replace() here anymore!
     } catch (err) {
       Alert.alert('Error', 'Unexpected error during login');
     } finally {
@@ -271,4 +258,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   }
-})
+});
