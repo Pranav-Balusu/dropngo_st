@@ -9,11 +9,11 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Package, MapPin, Clock, Phone, Navigation, QrCode, CircleCheck as CheckCircle, User, Camera, Car } from 'lucide-react-native';
+import { Package, User, Camera, Car, CircleCheck as CheckCircle, Navigation, Phone } from 'lucide-react-native';
 import LuggagePhotoVerification from '@/components/LuggagePhotoVerification';
 
-// --- ADDED: Type definition for a single booking for better type safety ---
-type Booking = {
+// --- ADDED: Specific types for active and completed bookings ---
+type ActiveBooking = {
   id: string;
   user: string;
   userPhone: string;
@@ -34,13 +34,25 @@ type Booking = {
   }
 };
 
+type CompletedBooking = {
+  id: string;
+  user: string;
+  pickup: string;
+  delivery: string;
+  completedTime: string;
+  amount: number;
+  commission: number;
+  luggage: number;
+  rating: number;
+};
+
+
 export default function PorterBookingsScreen() {
   const [selectedTab, setSelectedTab] = useState('active');
   const [verificationModalVisible, setVerificationModalVisible] = useState(false);
-  // --- UPDATED: Typed the state to be a Booking or null ---
-  const [selectedBookingForVerification, setSelectedBookingForVerification] = useState<Booking | null>(null);
+  const [selectedBookingForVerification, setSelectedBookingForVerification] = useState<ActiveBooking | null>(null);
 
-  const bookingsData = {
+  const bookingsData: { active: ActiveBooking[], completed: CompletedBooking[] } = {
     active: [
       {
         id: 'DN001234',
@@ -129,7 +141,7 @@ export default function PorterBookingsScreen() {
   };
 
   // --- UPDATED: Typed the booking parameter ---
-  const handleVerifyAndDeliver = (booking: Booking) => {
+  const handleVerifyAndDeliver = (booking: ActiveBooking) => {
     setSelectedBookingForVerification(booking);
     setVerificationModalVisible(true);
   };

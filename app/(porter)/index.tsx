@@ -9,8 +9,8 @@ import {
   Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-// --- UPDATED: Added QrCode icon to the import list ---
-import { Package, IndianRupee, Clock, Star, TrendingUp, MapPin, Bell, Navigation, QrCode } from 'lucide-react-native';
+// --- ADDED CheckCircle to the import list ---
+import { Package, IndianRupee, Clock, Star, TrendingUp, MapPin, Bell, Navigation, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function PorterDashboardScreen() {
   const [isOnline, setIsOnline] = useState(true);
@@ -48,8 +48,7 @@ export default function PorterDashboardScreen() {
 
   const quickActions = [
     { title: 'Start Pickup', icon: Package, color: '#3B82F6' },
-    // --- UPDATED: Changed icon from Package to QrCode for clarity ---
-    { title: 'Scan QR', icon: QrCode, color: '#F97316' },
+    { title: 'Scan QR', icon: Package, color: '#F97316' },
     { title: 'Navigation', icon: Navigation, color: '#059669' },
     { title: 'Report Issue', icon: Bell, color: '#DC2626' },
   ];
