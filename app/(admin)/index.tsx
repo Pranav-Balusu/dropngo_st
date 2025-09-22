@@ -10,7 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TrendingUp, Users, Package, IndianRupee, Clock, MapPin, Star, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+// Corrected the icon import from 'TriangleAlert as AlertTriangle' to 'AlertTriangle'
+import { TrendingUp, Users, Package, IndianRupee, Clock, MapPin, Star, AlertTriangle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
@@ -243,6 +244,7 @@ export default function AdminDashboardScreen() {
   );
 }
 
+// Add the full StyleSheet here...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
