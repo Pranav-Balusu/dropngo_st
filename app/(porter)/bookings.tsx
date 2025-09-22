@@ -9,17 +9,38 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Package, MapPin, Clock, Phone, Navigation, QrCode, CircleCheck as CheckCircle, User, IndianRupee, Camera, Car, FileText } from 'lucide-react-native';
+import { Package, MapPin, Clock, Phone, Navigation, QrCode, CircleCheck as CheckCircle, User, Camera, Car } from 'lucide-react-native';
 import LuggagePhotoVerification from '@/components/LuggagePhotoVerification';
 
+// --- ADDED: Type definition for a single booking for better type safety ---
+type Booking = {
+  id: string;
+  user: string;
+  userPhone: string;
+  pickup: string;
+  delivery: string;
+  pickupTime: string;
+  deliveryTime: string;
+  amount: number;
+  commission: number;
+  luggage: number;
+  status: 'pickup-pending' | 'ready-for-delivery';
+  otp: string;
+  luggagePhotos: string[];
+  porterDetails: {
+    name: string;
+    vehicle: string;
+    phone: string;
+  }
+};
 
 export default function PorterBookingsScreen() {
   const [selectedTab, setSelectedTab] = useState('active');
   const [verificationModalVisible, setVerificationModalVisible] = useState(false);
-  const [selectedBookingForVerification, setSelectedBookingForVerification] = useState(null);
-  const [luggagePhotos, setLuggagePhotos] = useState<string[]>([]);
-  const [selectedPorter, setSelectedPorter] = useState<Porter | null>(null);
-  const bookings = {
+  // --- UPDATED: Typed the state to be a Booking or null ---
+  const [selectedBookingForVerification, setSelectedBookingForVerification] = useState<Booking | null>(null);
+
+  const bookingsData = {
     active: [
       {
         id: 'DN001234',
@@ -107,7 +128,8 @@ export default function PorterBookingsScreen() {
     );
   };
 
-  const handleVerifyAndDeliver = (booking: any) => {
+  // --- UPDATED: Typed the booking parameter ---
+  const handleVerifyAndDeliver = (booking: Booking) => {
     setSelectedBookingForVerification(booking);
     setVerificationModalVisible(true);
   };
@@ -142,7 +164,7 @@ export default function PorterBookingsScreen() {
             styles.tabText,
             selectedTab === 'active' && styles.tabTextActive
           ]}>
-            Active ({bookings.active.length})
+            Active ({bookingsData.active.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -156,13 +178,13 @@ export default function PorterBookingsScreen() {
             styles.tabText,
             selectedTab === 'completed' && styles.tabTextActive
           ]}>
-            Completed ({bookings.completed.length})
+            Completed ({bookingsData.completed.length})
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {selectedTab === 'active' && bookings.active.map((booking) => (
+        {selectedTab === 'active' && bookingsData.active.map((booking) => (
           <View key={booking.id} style={styles.bookingCard}>
             <View style={styles.bookingHeader}>
               <View style={styles.bookingInfo}>
@@ -245,7 +267,7 @@ export default function PorterBookingsScreen() {
           </View>
         ))}
 
-        {selectedTab === 'completed' && bookings.completed.map((booking) => (
+        {selectedTab === 'completed' && bookingsData.completed.map((booking) => (
           <View key={booking.id} style={styles.completedCard}>
             <View style={styles.completedHeader}>
               <View style={styles.completedInfo}>
