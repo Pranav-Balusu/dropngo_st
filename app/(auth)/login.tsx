@@ -19,27 +19,20 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    setLoading(true);
-    try {
-      // The only job of this function is to sign in.
-      // The root layout will handle the navigation automatically.
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        Alert.alert('Login Failed', error.message);
-      }
-      // No need for router.replace() here anymore!
-    } catch (err) {
-      Alert.alert('Error', 'Unexpected error during login');
-    } finally {
-      setLoading(false);
+    
+    // The global loading indicator in the root layout will handle the UI state.
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      Alert.alert('Login Failed', error.message);
     }
+    // On success, the listener in app/_layout.tsx will handle the redirect.
   };
 
   return (
@@ -95,13 +88,10 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              style={styles.loginButton}
               onPress={handleLogin}
-              disabled={loading}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? 'Signing In...' : 'Sign In'}
-              </Text>
+              <Text style={styles.loginButtonText}>Sign In</Text>
             </TouchableOpacity>
 
             <View style={styles.divider}>
@@ -116,16 +106,13 @@ export default function LoginScreen() {
             >
               <Text style={styles.registerButtonText}>Create New Account</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            
+            <TouchableOpacity
+              style={styles.porterRegisterButton}
+              onPress={() => router.push('/(auth)/porter-register')}
+            >
+                <Text style={styles.porterRegisterText}>Register as a Porter →</Text>
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Demo accounts: user@dropngo.com, porter@dropngo.com, admin@dropngo.com
-            </Text>
           </View>
         </KeyboardAvoidingView>
       </LinearGradient>
@@ -205,9 +192,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
   loginButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -240,22 +224,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  forgotPassword: {
+  porterRegisterButton: {
     alignItems: 'center',
     marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
   },
-  forgotPasswordText: {
-    color: '#6B7280',
+  porterRegisterText: {
+    color: '#059669',
     fontSize: 14,
+    fontWeight: '600',
   },
-  footer: {
-    marginTop: 32,
-    paddingHorizontal: 16,
-  },
-  footerText: {
-    color: '#E5E7EB',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-  }
 });

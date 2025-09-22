@@ -10,13 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { User, Mail, Lock, Phone, MapPin, Eye, EyeOff, Upload, Car, FileText, Camera, CircleCheck as CheckCircle } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '@/lib/supabase'; // Import Supabase client
+import { supabase } from '@/lib/supabase';
 
 export default function PorterRegisterScreen() {
   const [formData, setFormData] = useState({
@@ -30,7 +29,7 @@ export default function PorterRegisterScreen() {
     vehicleNumber: '',
     vehicleType: '',
   });
-  const [documents, setDocuments] = useState({
+  const [documents, setDocuments] =  useState({
     idProof: null as string | null,
     licensePhoto: null as string | null,
     vehicleRegistration: null as string | null,
@@ -64,8 +63,19 @@ export default function PorterRegisterScreen() {
   };
 
   const handleRegister = async () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // --- UPDATED VALIDATION LOGIC ---
+    // Check for all required fields, including porter-specific ones.
+    if (
+      !formData.name || 
+      !formData.email || 
+      !formData.phone || 
+      !formData.password ||
+      !formData.address ||
+      !formData.licenseNumber ||
+      !formData.vehicleNumber ||
+      !formData.vehicleType
+    ) {
+      Alert.alert('Error', 'Please fill in all required (*) fields');
       return;
     }
 
@@ -92,9 +102,8 @@ export default function PorterRegisterScreen() {
             license_number: formData.licenseNumber,
             vehicle_number: formData.vehicleNumber,
             vehicle_type: formData.vehicleType,
-            documents: documents,
-            role: 'porter', // Assign porter role
-            verification_status: 'pending' // Set verification status
+            // documents: documents, // Note: Storing local URIs directly in metadata isn't ideal. This should be handled by uploading to Supabase storage first.
+            role: 'porter',
           },
         },
       });
@@ -102,6 +111,8 @@ export default function PorterRegisterScreen() {
       if (error) {
         Alert.alert('Registration Failed', error.message);
       } else {
+        // Here you would typically upload the document images to Supabase Storage
+        // using the signed-in user's ID, but for now, we'll show success.
         Alert.alert(
           'Registration Submitted', 
           'Your porter registration has been submitted for verification. You will be notified once approved.',
@@ -109,7 +120,9 @@ export default function PorterRegisterScreen() {
         );
       }
     } catch (error) {
-      Alert.alert('Error', 'Registration failed. Please try again.');
+      // The Alert in the catch block will show "database error saving new user"
+      // if the trigger fails for any reason.
+      Alert.alert('Error', 'Database error saving new user. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -215,7 +228,7 @@ export default function PorterRegisterScreen() {
                 <Car size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Vehicle Type (Bike/Car/Van)"
+                  placeholder="Vehicle Type (Bike/Car/Van) *"
                   value={formData.vehicleType}
                   onChangeText={(text) => updateFormData('vehicleType', text)}
                   placeholderTextColor="#9CA3AF"
@@ -272,23 +285,6 @@ export default function PorterRegisterScreen() {
                     <View style={styles.uploadContainer}>
                       <FileText size={20} color="#6B7280" />
                       <Text style={styles.uploadText}>Vehicle Registration *</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.documentUpload}
-                  onPress={() => pickImage('vehiclePhoto')}
-                >
-                  {documents.vehiclePhoto ? (
-                    <View style={styles.uploadedContainer}>
-                      <CheckCircle size={20} color="#059669" />
-                      <Text style={styles.uploadedText}>Vehicle Photo Uploaded</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.uploadContainer}>
-                      <Camera size={20} color="#6B7280" />
-                      <Text style={styles.uploadText}>Vehicle Photo</Text>
                     </View>
                   )}
                 </TouchableOpacity>

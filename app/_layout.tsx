@@ -4,53 +4,32 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-
-// --- BACKGROUND TASK IMPORTS ---
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import { updatePorterLocation } from '@/services/locationService';
 
-// --- BACKGROUND TASK DEFINITION FOR PORTER LOCATION TRACKING ---
-// This code must be in the global scope (outside of any component).
+// --- BACKGROUND TASK DEFINITION ---
 const LOCATION_TASK_NAME = 'porterLocationTask';
-
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
-  if (error) {
-    console.error('TaskManager error:', error);
-    return;
-  }
+  if (error) { console.error('TaskManager error:', error); return; }
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
-    const currentLocation = locations[0];
-
-    if (currentLocation) {
-      // Get the current user session to find the porter's ID
+    if (locations[0]) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Find the associated porter_profile id from the user id
         const { data: porterProfile } = await supabase
-          .from('porter_profiles')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .single();
-        
+          .from('porter_profiles').select('id').eq('user_id', session.user.id).single();
         if (porterProfile) {
-          await updatePorterLocation(
-            porterProfile.id,
-            {
-              latitude: currentLocation.coords.latitude,
-              longitude: currentLocation.coords.longitude,
-              timestamp: new Date(currentLocation.timestamp).toISOString(),
-            },
-            undefined, // In a real app, you might fetch the current active booking ID
-            'in-transit' // You can set the status based on the booking's state
-          );
+          await updatePorterLocation(porterProfile.id, {
+            latitude: locations[0].coords.latitude,
+            longitude: locations[0].coords.longitude,
+            timestamp: new Date(locations[0].timestamp).toISOString(),
+          }, undefined, 'in-transit');
         }
       }
     }
   }
 });
-
 
 // --- ROOT LAYOUT COMPONENT ---
 export default function RootLayout() {
@@ -64,25 +43,27 @@ export default function RootLayout() {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        const inAuthGroup = segments[0] === '(auth)';
+        const currentGroup = segments[0];
+        const inAuthGroup = currentGroup === '(auth)';
 
         if (session) {
           const { data: userProfile } = await supabase
-            .from('users')
-            .select('user_type')
-            .eq('id', session.user.id)
-            .single();
+            .from('users').select('user_type').eq('id', session.user.id).single();
           
           const userType = userProfile?.user_type;
-
-          if (userType === 'admin') {
+          
+          // --- THIS IS THE FIX ---
+          // Redirect only if the user is not already in the correct group.
+          if (userType === 'admin' && currentGroup !== '(admin)') {
             router.replace('/(admin)');
-          } else if (userType === 'porter') {
+          } else if (userType === 'porter' && currentGroup !== '(porter)') {
             router.replace('/(porter)');
-          } else {
+          } else if (userType === 'customer' && currentGroup !== '(user)') {
             router.replace('/(user)');
           }
-        } else if (!session && !inAuthGroup) {
+
+        } else if (!inAuthGroup) {
+          // User is signed out and not on a login/register screen.
           router.replace('/(auth)/login');
         }
       }
@@ -91,7 +72,7 @@ export default function RootLayout() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigationState?.key, segments]);
+  }, [navigationState?.key, segments]); 
 
   if (!navigationState?.key) {
     return (
