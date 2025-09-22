@@ -16,7 +16,6 @@ import { getCurrentPricing, updatePricingConfig } from '@/services/pricingServic
 import { 
   Settings,
   IndianRupee,
-  MapPin,
   Bell,
   Shield,
   Database,
@@ -26,16 +25,10 @@ import {
   Plus,
   Building
 } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase'; // Import the Supabase client
+import { supabase } from '@/lib/supabase';
 
-// Assuming you have this type defined in '@/types/pricing.ts'
+// Corrected PricingConfig type (removed 'self-service')
 type PricingConfig = {
-  'self-service': {
-    small: number;
-    medium: number;
-    large: number;
-    'extra-large': number;
-  };
   pickup: {
     small: number;
     medium: number;
@@ -203,34 +196,6 @@ export default function AdminSettingsScreen() {
           </View>
           
           <View style={styles.pricingContainer}>
-            <Text style={styles.pricingSubtitle}>Self-Service Rates (per hour)</Text>
-            <View style={styles.pricingGrid}>
-              {Object.entries(pricing['self-service']).map(([size, price]) => (
-                <View key={size} style={styles.pricingItem}>
-                  <Text style={styles.pricingLabel}>
-                    {size.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                  </Text>
-                  <View style={styles.pricingInputContainer}>
-                    <Text style={styles.currencySymbol}>₹</Text>
-                    <TextInput
-                      style={styles.pricingInput}
-                      value={Math.round(price as number).toString()}
-                      onChangeText={(text) => 
-                        setPricing(prev => {
-                          if (!prev) return null;
-                          return {
-                            ...prev,
-                            'self-service': { ...prev['self-service'], [size]: parseInt(text) || 0 }
-                          };
-                        })
-                      }
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
-
             <Text style={styles.pricingSubtitle}>Pickup Service Rates (per hour)</Text>
             <View style={styles.pricingGrid}>
               {Object.entries(pricing.pickup).map(([size, price]) => (
@@ -399,6 +364,7 @@ export default function AdminSettingsScreen() {
   );
 }
 
+// Add the full StyleSheet here...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -520,6 +486,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 8,
     textAlign: 'center',
+    textTransform: 'capitalize'
   },
   pricingInputContainer: {
     flexDirection: 'row',
