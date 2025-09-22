@@ -3,19 +3,63 @@ import { Stack, router, useRootNavigationState, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { supabase } from '@/lib/supabase';
-
-// Note: I'm assuming useFrameworkReady() is a custom hook you need.
-// If not, you can safely remove it.
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
+// --- BACKGROUND TASK IMPORTS ---
+import * as TaskManager from 'expo-task-manager';
+import * as Location from 'expo-location';
+import { updatePorterLocation } from '@/services/locationService';
+
+// --- BACKGROUND TASK DEFINITION FOR PORTER LOCATION TRACKING ---
+// This code must be in the global scope (outside of any component).
+const LOCATION_TASK_NAME = 'porterLocationTask';
+
+TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+  if (error) {
+    console.error('TaskManager error:', error);
+    return;
+  }
+  if (data) {
+    const { locations } = data as { locations: Location.LocationObject[] };
+    const currentLocation = locations[0];
+
+    if (currentLocation) {
+      // Get the current user session to find the porter's ID
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Find the associated porter_profile id from the user id
+        const { data: porterProfile } = await supabase
+          .from('porter_profiles')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (porterProfile) {
+          await updatePorterLocation(
+            porterProfile.id,
+            {
+              latitude: currentLocation.coords.latitude,
+              longitude: currentLocation.coords.longitude,
+              timestamp: new Date(currentLocation.timestamp).toISOString(),
+            },
+            undefined, // In a real app, you might fetch the current active booking ID
+            'in-transit' // You can set the status based on the booking's state
+          );
+        }
+      }
+    }
+  }
+});
+
+
+// --- ROOT LAYOUT COMPONENT ---
 export default function RootLayout() {
-  useFrameworkReady(); // Kept your custom hook
+  useFrameworkReady();
   
   const segments = useSegments();
   const navigationState = useRootNavigationState();
 
   useEffect(() => {
-    // If the navigation state is not ready yet, do nothing.
     if (!navigationState?.key) return;
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -23,7 +67,6 @@ export default function RootLayout() {
         const inAuthGroup = segments[0] === '(auth)';
 
         if (session) {
-          // User is signed in, fetch their role.
           const { data: userProfile } = await supabase
             .from('users')
             .select('user_type')
@@ -32,7 +75,6 @@ export default function RootLayout() {
           
           const userType = userProfile?.user_type;
 
-          // Navigate to the correct stack based on the user's role.
           if (userType === 'admin') {
             router.replace('/(admin)');
           } else if (userType === 'porter') {
@@ -41,19 +83,16 @@ export default function RootLayout() {
             router.replace('/(user)');
           }
         } else if (!session && !inAuthGroup) {
-          // User is signed out and not in the auth group, so redirect to login.
           router.replace('/(auth)/login');
         }
       }
     );
 
-    // Cleanup the listener when the component unmounts
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigationState?.key, segments]); // Rerun the effect when navigation is ready or segments change
+  }, [navigationState?.key, segments]);
 
-  // Show a loading indicator while we determine the auth state.
   if (!navigationState?.key) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -65,7 +104,6 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
-        {/* Define all your top-level layouts (route groups) here */}
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(user)" />
         <Stack.Screen name="(admin)" />
