@@ -1,7 +1,8 @@
-import { supabase, createBooking, Booking, LuggageItem } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import type { Booking, LuggageItem } from '@/lib/supabase';
 
 export interface BookingDetails {
-  serviceType: 'self-service' | 'pickup';
+  serviceType: 'pickup'; // Removed 'self-service'
   pickupLocation: string;
   deliveryLocation: string;
   storageHours: number;
@@ -11,7 +12,7 @@ export interface BookingDetails {
     quantity: number;
     price: number;
   }>;
-  luggagePhotos: string[];
+  luggagePhotos: string[]; // Assuming these are local URIs for upload
   totalItems: number;
   breakdown: {
     storage: number;
@@ -19,6 +20,7 @@ export interface BookingDetails {
     total: number;
     hours: number;
   };
+  insurance: boolean;
 }
 
 export const generateBookingNumber = (): string => {
@@ -48,46 +50,54 @@ export const processBooking = async (
     const pickupTime = new Date();
     const deliveryTime = calculateDeliveryTime(pickupTime, bookingDetails.storageHours);
 
-    // Create booking data
-    const bookingData: Partial<Booking> = {
-      booking_number: bookingNumber,
-      user_id: userId,
-      service_type: bookingDetails.serviceType,
-      pickup_location: bookingDetails.pickupLocation,
-      delivery_location: bookingDetails.deliveryLocation,
-      storage_hours: bookingDetails.storageHours,
-      status: 'pending',
-      total_amount: bookingDetails.breakdown.total,
-      storage_fee: bookingDetails.breakdown.storage,
-      delivery_fee: bookingDetails.breakdown.delivery,
-      pickup_time: pickupTime.toISOString(),
-      delivery_time: deliveryTime.toISOString(),
-      otp: otp,
-    };
+    // 1. Create the main booking record
+    const { data: newBooking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert({
+        booking_number: bookingNumber,
+        user_id: userId,
+        service_type: 'pickup',
+        pickup_location: bookingDetails.pickupLocation,
+        delivery_location: bookingDetails.deliveryLocation,
+        storage_hours: bookingDetails.storageHours,
+        status: 'pending',
+        total_amount: bookingDetails.breakdown.total,
+        storage_fee: bookingDetails.breakdown.storage,
+        delivery_fee: bookingDetails.breakdown.delivery,
+        pickup_time: pickupTime.toISOString(),
+        delivery_time: deliveryTime.toISOString(),
+        otp: otp,
+      })
+      .select()
+      .single();
 
-    // Create luggage items data
-    const luggageItemsData: Partial<LuggageItem>[] = bookingDetails.luggageItems.map(item => ({
+    if (bookingError) throw bookingError;
+
+    // 2. Create the associated luggage items
+    const luggageItemsData: Omit<LuggageItem, 'id' | 'created_at'>[] = bookingDetails.luggageItems.map(item => ({
+      booking_id: newBooking.id,
       luggage_size: item.id as 'small' | 'medium' | 'large' | 'extra-large',
       quantity: item.quantity,
       price_per_hour: item.price,
       total_price: item.price * item.quantity * bookingDetails.storageHours,
     }));
+    
+    const { error: itemsError } = await supabase.from('luggage_items').insert(luggageItemsData);
+    if (itemsError) throw itemsError;
 
-    // Create booking with items and photos
-    const booking = await createBooking(
-      bookingData,
-      luggageItemsData,
-      bookingDetails.luggagePhotos
-    );
+    // 3. TODO: Handle luggage photo uploads to Supabase Storage
+    // For now, we'll just log them. In a real app, you would upload each photo
+    // from bookingDetails.luggagePhotos and save the URL.
+    console.log('Photo URIs to upload:', bookingDetails.luggagePhotos);
 
-    return booking;
+    return newBooking;
   } catch (error) {
     console.error('Error processing booking:', error);
     throw error;
   }
 };
 
-export const getBookingsByUser = async (userId: string): Promise<Booking[]> => {
+export const getBookingsByUser = async (userId: string): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('bookings')
@@ -107,7 +117,7 @@ export const getBookingsByUser = async (userId: string): Promise<Booking[]> => {
   }
 };
 
-export const getBookingsByPorter = async (porterId: string): Promise<Booking[]> => {
+export const getBookingsByPorter = async (porterId: string): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('bookings')
@@ -115,7 +125,7 @@ export const getBookingsByPorter = async (porterId: string): Promise<Booking[]> 
         *,
         luggage_items(*),
         luggage_photos(*),
-        users!bookings_user_id_fkey(name, phone)
+        users!bookings_user_id_fkey(full_name, phone)
       `)
       .eq('porter_id', porterId)
       .order('created_at', { ascending: false });
@@ -148,27 +158,6 @@ export const updateBookingStatus = async (
     if (error) throw error;
   } catch (error) {
     console.error('Error updating booking status:', error);
-    throw error;
-  }
-};
-
-export const assignPorterToBooking = async (
-  bookingId: string,
-  porterId: string
-): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('bookings')
-      .update({
-        porter_id: porterId,
-        status: 'confirmed',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', bookingId);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error assigning porter to booking:', error);
     throw error;
   }
 };
