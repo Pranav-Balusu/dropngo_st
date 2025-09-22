@@ -105,7 +105,7 @@ export default function TrackingScreen() {
             <View style={styles.detailRow}>
               <Package size={16} color="#6B7280" />
               <Text style={styles.detailText}>
-                {Object.values(currentBooking.luggage).reduce((a, b) => a + b, 0)} items • {currentBooking.serviceType.replace('-', ' ')}
+                {Object.values(currentBooking.luggage).reduce((a, b) => a + b, 0)} items • Pickup Service
               </Text>
             </View>
             <View style={styles.detailRow}>
@@ -207,9 +207,7 @@ export default function TrackingScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Service Type:</Text>
-              <Text style={styles.summaryValue}>
-                {currentBooking.serviceType === 'pickup' ? 'Pickup Service' : 'Self-Service'}
-              </Text>
+              <Text style={styles.summaryValue}>Pickup Service</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Total Amount:</Text>
