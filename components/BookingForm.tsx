@@ -54,7 +54,7 @@ interface BookingFormProps {
   photoUploading: boolean;
   calculateTotal: (pricing: PricingConfig) => number;
   pricing: PricingConfig;
-  handleBook: () => void;
+  handleBook: () => Promise<void>;
 }
 
 const bagSizes = [

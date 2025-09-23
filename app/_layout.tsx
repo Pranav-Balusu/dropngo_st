@@ -1,97 +1,129 @@
-import { useEffect } from 'react';
-import { Stack, router, useRootNavigationState, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import * as TaskManager from 'expo-task-manager';
-import * as Location from 'expo-location';
-import { updatePorterLocation } from '@/services/locationService';
+import { Session } from '@supabase/supabase-js';
 
-// --- BACKGROUND TASK DEFINITION ---
-const LOCATION_TASK_NAME = 'porterLocationTask';
-TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
-  if (error) { console.error('TaskManager error:', error); return; }
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    if (locations[0]) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: porterProfile } = await supabase
-          .from('porter_profiles').select('id').eq('user_id', session.user.id).single();
-        if (porterProfile) {
-          await updatePorterLocation(porterProfile.id, {
-            latitude: locations[0].coords.latitude,
-            longitude: locations[0].coords.longitude,
-            timestamp: new Date(locations[0].timestamp).toISOString(),
-          }, undefined, 'in-transit');
-        }
-      }
-    }
-  }
+// Define the shape of the user profile
+export type Profile = {
+  id: string;
+  full_name: string;
+  role: 'admin' | 'porter' | 'user';
+};
+
+// Define the shape of the authentication context
+type AuthData = {
+  session: Session | null;
+  profile: Profile | null;
+  loading: boolean;
+  profileLoading: boolean;
+};
+
+// Create the authentication context
+const AuthContext = createContext<AuthData>({
+  session: null,
+  profile: null,
+  loading: true,
+  profileLoading: true,
 });
 
-// --- ROOT LAYOUT COMPONENT ---
+// The main layout component
 export default function RootLayout() {
-  useFrameworkReady();
-  
-  const segments = useSegments();
-  const navigationState = useRootNavigationState();
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
-    if (!navigationState?.key) return;
+    // Fetch the initial session
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setLoading(false);
+    };
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const currentGroup = `(${segments[0] || ''})`;
-        const inAuthGroup = currentGroup === '(auth)';
+    fetchSession();
 
-        if (session) {
-          const { data: userProfile } = await supabase
-            .from('users').select('user_type').eq('id', session.user.id).single();
-          
-          const userType = userProfile?.user_type;
-          
-          // --- THIS IS THE FIX ---
-          // Redirect only if the user is not already in the correct group.
-          if (userType === 'admin' && currentGroup !== '(admin)') {
-            router.replace('/(admin)');
-          } else if (userType === 'porter' && currentGroup !== '(porter)') {
-            router.replace('/(porter)');
-          } else if (userType === 'customer' && currentGroup !== '(user)') {
-            router.replace('/(user)');
-          }
-
-        } else if (!inAuthGroup) {
-          // User is signed out and not on a login/register screen.
-          router.replace('/(auth)/login');
-        }
-      }
-    );
+    // Listen for authentication state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigationState?.key, segments]); 
+  }, []);
 
-  if (!navigationState?.key) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#3B82F6" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (!session?.user) {
+      setProfileLoading(false);
+      setProfile(null);
+      return;
+    }
+
+    setProfileLoading(true);
+    const userEmail = session.user.email;
+
+    // Hardcoded credentials logic
+    if (userEmail === 'admin@dropngo.com') {
+      setProfile({ id: session.user.id, full_name: 'Admin User', role: 'admin' });
+      setProfileLoading(false);
+    } else if (userEmail === 'porter@dropngo.com') {
+      setProfile({ id: session.user.id, full_name: 'Porter User', role: 'porter' });
+      setProfileLoading(false);
+    } else if (userEmail === 'user@dropngo.com') {
+      setProfile({ id: session.user.id, full_name: 'Sample User', role: 'user' });
+      setProfileLoading(false);
+    } else {
+      // Fallback to database for other users
+      const fetchProfile = async () => {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        setProfile(data as Profile | null);
+        setProfileLoading(false);
+      };
+      fetchProfile();
+    }
+  }, [session?.user]);
 
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(user)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="(porter)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </>
+    <AuthContext.Provider value={{ session, profile, loading, profileLoading }}>
+      <InitialLayout />
+    </AuthContext.Provider>
   );
 }
+
+// Component to handle redirection logic
+const InitialLayout = () => {
+  const { session, profile, loading, profileLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading || profileLoading) {
+      return; // Wait until session and profile are loaded
+    }
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (session && profile) {
+      // User is logged in, redirect based on role
+      const redirectPath =
+        profile.role === 'admin' ? '/(admin)' :
+        profile.role === 'porter' ? '/(porter)' :
+        '/(user)';
+      router.replace(redirectPath);
+    } else if (!session && !inAuthGroup) {
+      // User is not logged in and not in the auth flow, redirect to login
+      router.replace('/(auth)/login');
+    }
+  }, [session, profile, loading, profileLoading, segments, router]);
+
+  return <Slot />;
+};
+
+// Custom hook to easily access auth data
+export const useAuth = () => useContext(AuthContext);

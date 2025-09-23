@@ -20,7 +20,6 @@ import { router } from 'expo-router';
 const MapView = require('react-native-maps').default;
 const Marker = require('react-native-maps').Marker;
 
-// --- CORRECTED Pricing config type (removed 'self-service') ---
 type PricingConfig = {
   pickup: {
     small: number;

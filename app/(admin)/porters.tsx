@@ -12,7 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, Filter, CircleCheck as CheckCircle, Circle as XCircle, Eye, Star, MapPin, Phone, Car, FileText, X, Package } from 'lucide-react-native';
+import { Search, Filter, CircleCheck as CheckCircle, XCircle, Eye, Star, MapPin, Phone, Car, FileText, X, Package } from 'lucide-react-native';
 
 type Porter = {
   id: string;
@@ -37,7 +37,7 @@ export default function AdminPortersScreen() {
   const [selectedPorter, setSelectedPorter] = useState<Porter | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const porters:Porter[] = [
+  const porters: Porter[] = [
     {
       id: 'P001',
       name: 'Rajesh Kumar',
@@ -105,7 +105,7 @@ export default function AdminPortersScreen() {
       `Are you sure you want to ${actionText} this porter?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
+        {
           text: action === 'approve' ? 'Approve' : 'Reject',
           onPress: () => {
             Alert.alert('Success', `Porter ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
@@ -115,7 +115,7 @@ export default function AdminPortersScreen() {
     );
   };
 
-  const viewPorterDetails = (porter: any) => {
+  const viewPorterDetails = (porter: Porter) => {
     setSelectedPorter(porter);
     setModalVisible(true);
   };
@@ -141,7 +141,7 @@ export default function AdminPortersScreen() {
             placeholderTextColor="#9CA3AF"
           />
         </View>
-        
+
         <View style={styles.filterTabs}>
           {['all', 'pending', 'verified', 'rejected'].map((status) => (
             <TouchableOpacity
@@ -185,7 +185,7 @@ export default function AdminPortersScreen() {
                   </View>
                 </View>
               </View>
-              
+
               <View style={[
                 styles.statusBadge,
                 porter.status === 'verified' && styles.statusVerified,

@@ -10,8 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-// Corrected the icon import from 'TriangleAlert as AlertTriangle' to 'AlertTriangle'
-import { TrendingUp, Users, Package, IndianRupee, Clock, MapPin, Star, AlertTriangle } from 'lucide-react-native';
+import { TrendingUp, Users, Package, IndianRupee, Star, AlertTriangle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
@@ -68,32 +67,6 @@ export default function AdminDashboardScreen() {
     { type: 'error', message: '3 customer complaints unresolved', action: 'Resolve' },
   ];
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          onPress: async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) {
-                Alert.alert('Error', error.message);
-              } else {
-                router.push('/(auth)/login');
-              }
-            } catch (logoutError) {
-              console.error('Logout error:', logoutError);
-              Alert.alert('Error', 'An unexpected error occurred during logout.');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -102,7 +75,7 @@ export default function AdminDashboardScreen() {
       >
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
         <Text style={styles.headerSubtitle}>DropNGo Operations Center</Text>
-        
+
         <View style={styles.filterContainer}>
           {['today', 'week', 'month'].map((filter) => (
             <TouchableOpacity
@@ -176,7 +149,7 @@ export default function AdminDashboardScreen() {
             ]}>
               <View style={styles.alertContent}>
                 <AlertTriangle size={16} color={
-                  alert.type === 'error' ? '#DC2626' : 
+                  alert.type === 'error' ? '#DC2626' :
                   alert.type === 'warning' ? '#F59E0B' : '#3B82F6'
                 } />
                 <Text style={styles.alertMessage}>{alert.message}</Text>
@@ -244,7 +217,6 @@ export default function AdminDashboardScreen() {
   );
 }
 
-// Add the full StyleSheet here...
 const styles = StyleSheet.create({
   container: {
     flex: 1,

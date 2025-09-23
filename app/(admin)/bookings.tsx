@@ -10,7 +10,7 @@ import {
   Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
+import {
   Search,
   Package,
   MapPin,
@@ -21,6 +21,7 @@ import {
   Star,
   X
 } from 'lucide-react-native';
+
 type Booking = {
   id: string;
   user: string;
@@ -41,10 +42,10 @@ type Booking = {
 export default function AdminBookingsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const bookings = [
+  const bookings: Booking[] = [
     {
       id: 'DN001234',
       user: 'John Doe',
@@ -141,7 +142,7 @@ export default function AdminBookingsScreen() {
             placeholderTextColor="#9CA3AF"
           />
         </View>
-        
+
         <View style={styles.filterTabs}>
           {['all', 'pending', 'in-transit', 'completed'].map((status) => (
             <TouchableOpacity

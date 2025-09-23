@@ -13,26 +13,33 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Luggage, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    
-    // The global loading indicator in the root layout will handle the UI state.
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      Alert.alert('Login Failed', error.message);
+    setLoading(true);
+
+    // Hardcoded credentials
+    if (email === 'user@dropngo.com' && password === 'password') {
+      router.replace('/(user)');
+    } else if (email === 'admin@dropngo.com' && password === 'password') {
+      router.replace('/(admin)');
+    } else if (email === 'porter@dropngo.com' && password === 'password') {
+      router.replace('/(porter)');
+    } else {
+      Alert.alert('Login Failed', 'Invalid email or password');
     }
-    // On success, the listener in app/_layout.tsx will handle the redirect.
+
+    setLoading(false);
   };
 
   return (
@@ -41,7 +48,7 @@ export default function LoginScreen() {
         colors={['#3B82F6', '#1E40AF']}
         style={styles.gradient}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.content}
         >
@@ -88,10 +95,13 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.loginButton}
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
+              disabled={loading}
             >
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              <Text style={styles.loginButtonText}>
+                {loading ? 'Signing In...' : 'Sign In'}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.divider}>
@@ -106,12 +116,14 @@ export default function LoginScreen() {
             >
               <Text style={styles.registerButtonText}>Create New Account</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.porterRegisterButton}
               onPress={() => router.push('/(auth)/porter-register')}
             >
-                <Text style={styles.porterRegisterText}>Register as a Porter →</Text>
+              <Text style={styles.porterRegisterText}>
+                Register as a Porter →
+              </Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -191,6 +203,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   loginButtonText: {
     color: '#FFFFFF',

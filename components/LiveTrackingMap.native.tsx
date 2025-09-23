@@ -80,7 +80,7 @@ export default function LiveTrackingMap({ visible, onClose, booking }: LiveTrack
     // Simulate porter movement (in real app, this would come from backend)
     const newLat = porterLocation.latitude + (Math.random() - 0.5) * 0.001;
     const newLng = porterLocation.longitude + (Math.random() - 0.5) * 0.001;
-    
+
     setPorterLocation({
       latitude: newLat,
       longitude: newLng,
@@ -109,9 +109,9 @@ export default function LiveTrackingMap({ visible, onClose, booking }: LiveTrack
     const R = 6371; // Radius of the Earth in kilometers
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
+    const a =
       Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     const d = R * c; // Distance in kilometers
@@ -202,7 +202,7 @@ export default function LiveTrackingMap({ visible, onClose, booking }: LiveTrack
             <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(booking.status) }]} />
             <Text style={styles.statusText}>{getStatusText(booking.status)}</Text>
           </View>
-          
+
           <View style={styles.porterInfo}>
             <View style={styles.porterDetails}>
               <Text style={styles.porterName}>{booking.porter.name}</Text>
@@ -218,7 +218,7 @@ export default function LiveTrackingMap({ visible, onClose, booking }: LiveTrack
                 </Text>
               )}
             </View>
-            
+
             <View style={styles.porterActions}>
               <TouchableOpacity style={styles.actionButton}>
                 <Phone size={20} color="#3B82F6" />
@@ -238,7 +238,7 @@ export default function LiveTrackingMap({ visible, onClose, booking }: LiveTrack
               <Text style={styles.locationAddress}>{booking.pickupLocation.address}</Text>
             </View>
           </View>
-          
+
           <View style={styles.locationItem}>
             <View style={[styles.locationDot, { backgroundColor: '#059669' }]} />
             <View style={styles.locationDetails}>
