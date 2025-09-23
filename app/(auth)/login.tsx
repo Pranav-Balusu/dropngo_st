@@ -28,7 +28,7 @@ export default function LoginScreen() {
 
     setLoading(true);
 
-    // Hardcoded credentials
+    // Hardcoded credentials for login and redirection
     if (email === 'user@dropngo.com' && password === 'password') {
       router.replace('/(user)');
     } else if (email === 'admin@dropngo.com' && password === 'password') {
