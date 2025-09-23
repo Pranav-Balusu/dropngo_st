@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Stack, router, useRootNavigationState, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import * as TaskManager from 'expo-task-manager';
@@ -9,6 +9,7 @@ import * as Location from 'expo-location';
 import { updatePorterLocation } from '@/services/locationService';
 
 // --- BACKGROUND TASK DEFINITION ---
+// (This is kept as-is from your repo, as it's not the cause of the redirect bug)
 const LOCATION_TASK_NAME = 'porterLocationTask';
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) { console.error('TaskManager error:', error); return; }
@@ -34,7 +35,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 // --- ROOT LAYOUT COMPONENT ---
 export default function RootLayout() {
   useFrameworkReady();
-  
+
   const segments = useSegments();
   const navigationState = useRootNavigationState();
 
@@ -45,25 +46,26 @@ export default function RootLayout() {
       async (event, session) => {
         const currentGroup = `(${segments[0] || ''})`;
         const inAuthGroup = currentGroup === '(auth)';
-
-        if (session) {
+        
+        // Check if there is a session and the user is on an auth page
+        if (session && inAuthGroup) {
           const { data: userProfile } = await supabase
             .from('users').select('user_type').eq('id', session.user.id).single();
           
           const userType = userProfile?.user_type;
           
-          // Redirect to the correct tab group based on the user's role.
-          // This is the correct logic for handling redirection after login.
-          if (userType === 'admin' && currentGroup !== '(admin)') {
+          // Redirect the user based on their role
+          if (userType === 'admin') {
             router.replace('/(admin)');
-          } else if (userType === 'porter' && currentGroup !== '(porter)') {
+          } else if (userType === 'porter') {
             router.replace('/(porter)');
-          } else if (userType === 'customer' && currentGroup !== '(user)') {
+          } else if (userType === 'customer') {
             router.replace('/(user)');
           }
-
-        } else if (!inAuthGroup) {
-          // User is signed out and not on a login/register screen.
+        } 
+        
+        // If there's no session and the user is NOT on an auth page, redirect to login
+        else if (!session && !inAuthGroup) {
           router.replace('/(auth)/login');
         }
       }
@@ -72,11 +74,11 @@ export default function RootLayout() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigationState?.key, segments]); 
+  }, [navigationState?.key, segments]);
 
   if (!navigationState?.key) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
@@ -95,3 +97,11 @@ export default function RootLayout() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

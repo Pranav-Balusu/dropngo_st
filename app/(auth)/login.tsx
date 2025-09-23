@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Luggage, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase'; // Import Supabase client
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,26 +21,21 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
+    
     setLoading(true);
 
-    // Hardcoded credentials for login and redirection
-    if (email === 'user@dropngo.com' && password === 'password') {
-      router.replace('/(user)');
-    } else if (email === 'admin@dropngo.com' && password === 'password') {
-      router.replace('/(admin)');
-    } else if (email === 'porter@dropngo.com' && password === 'password') {
-      router.replace('/(porter)');
-    } else {
-      Alert.alert('Login Failed', 'Invalid email or password');
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
+    if (error) {
+      Alert.alert('Login Failed', error.message);
+    }
     setLoading(false);
+    // Redirection is now handled by the listener in the root layout after a successful login.
   };
 
   return (
@@ -48,7 +44,7 @@ export default function LoginScreen() {
         colors={['#3B82F6', '#1E40AF']}
         style={styles.gradient}
       >
-        <KeyboardAvoidingView
+        <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.content}
         >
@@ -116,14 +112,12 @@ export default function LoginScreen() {
             >
               <Text style={styles.registerButtonText}>Create New Account</Text>
             </TouchableOpacity>
-
+            
             <TouchableOpacity
               style={styles.porterRegisterButton}
               onPress={() => router.push('/(auth)/porter-register')}
             >
-              <Text style={styles.porterRegisterText}>
-                Register as a Porter →
-              </Text>
+                <Text style={styles.porterRegisterText}>Register as a Porter →</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
