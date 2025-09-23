@@ -40,8 +40,8 @@ export default function PriceCalculator({ visible, onClose, onSelect }: PriceCal
 
   const pricing = {
     pickup: {
-      small: 3.0,
-      medium: 5.0,
+      small: 5.0,
+      medium: 6.0,
       large: 7.0,
       'extra-large': 9.0,
     },
